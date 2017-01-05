@@ -1,0 +1,4 @@
+.vagrant/
+.vscode/
+example/image_viewer
+example/webcam
