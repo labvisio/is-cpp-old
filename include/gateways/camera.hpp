@@ -14,10 +14,9 @@ using namespace is::msg::camera;
 
 template <typename ThreadSafeCameraDriver>
 struct Camera {
-  ThreadSafeCameraDriver camera;
   is::Connection is;
 
-  Camera(std::string const& name, std::string const& uri) : is(is::connect(uri)) {
+  Camera(std::string const& name, std::string const& uri, ThreadSafeCameraDriver & camera) : is(is::connect(uri)) {
     auto thread = is::advertise(uri, name, {
       {
         "set_fps",

@@ -24,6 +24,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  is::gw::Camera<is::driver::Webcam> gw(entity, uri);
+  is::driver::Webcam camera;
+  is::gw::Camera<is::driver::Webcam> gw(entity, uri, camera);
   return 0;
 }
