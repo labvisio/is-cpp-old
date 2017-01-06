@@ -36,16 +36,20 @@ struct PtGrey {
         get_handle(ip_address, handle);
     }
 
+    ~PtGrey() {
+        
+    }
+
     void set_fps(double fps) {
 
     }
 
     double get_fps() {
-
+        return 0.0;
     }
 
     double get_max_fps() {
-
+        return 0.0;
     }
 
     void set_resolution(Resolution resolution) {
@@ -53,7 +57,8 @@ struct PtGrey {
     }
 
     Resolution get_resolution() {
-
+        Resolution resolution;
+        return resolution;
     }
 
     void set_image_type(ImageType image_type) {
@@ -63,11 +68,12 @@ struct PtGrey {
     ImageType get_image_type() { return ImageType::RGB; }
 
     cv::Mat get_frame() {
-
+        cv::Mat image;
+        return image;
     }
 
     /*-------------------------------------------------------------------*/
-     void get_handle(const std::string& ip_address, PRGuid* guid) {
+     void get_handle(const std::string& ip_address, PGRGuid* guid) {
         BusManager bus;
         Error error;
         int ip_int = ip_to_int(ip_address.c_str());
@@ -79,9 +85,7 @@ struct PtGrey {
         if (error != PGRERROR_OK) {
             error.PrintErrorTrace();
             throw std::runtime_error("Camera not found.");
-        }
-        unique_ptr<PointGrey> camera(new PointGrey(guid));
-        return camera;
+        }       
     }
 
     std::vector<std::string> split(const std::string &s, char delim) {
@@ -100,7 +104,6 @@ struct PtGrey {
 	    int IP = 0;
 	    if (split_data.size()==4) {
 	    	int sl_num = 24;
-	    	int mask = 0xff000000;
 	    	for ( auto& d : split_data) {
 	    		int octets = stoi(d); 
 	    		if ( ( octets >> 8) && 0xffffff00 ) {
@@ -113,8 +116,6 @@ struct PtGrey {
 	    }
 	    return 0;
     }
-
-}
 
 };
 
