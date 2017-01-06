@@ -13,5 +13,5 @@ all: $(EXECS)
 clean:
 	rm -f $(EXECS)
 
-%: %.cpp
+camera-ptgrey: camera-ptgrey.cpp ../../include/drivers/ptgrey.hpp
 	$(COMPILER) $@.cpp -o $@ $(FLAGS) $(SO_DEPS) $(SO_DEPS2) -lboost_program_options -I $(PWD)/../../include -lpthread

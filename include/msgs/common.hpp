@@ -11,6 +11,10 @@ namespace common {
 
 enum class Status { OK, FAILED };
 
+struct Delay {
+    uint64_t delay; // [ms]
+};
+
 }  // ::camera
 }  // ::msg
 }  // ::is

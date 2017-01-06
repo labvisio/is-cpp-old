@@ -37,6 +37,8 @@ struct Webcam {
 
   double get_max_fps() { return 30.0; }
 
+  void set_image_type(ImageType) {}
+  
   ImageType get_image_type() { return ImageType::RGB; }
 
   Resolution get_resolution() {
