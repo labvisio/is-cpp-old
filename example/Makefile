@@ -1,16 +1,22 @@
 COMPILER = g++
 FLAGS = -std=c++14 -O3 -Wall -Werror -Wextra
 
-SO_DEPS = $(shell pkg-config --libs --cflags libSimpleAmqpClient msgpack librabbitmq opencv libssl | sed -E 's/rt\\;//g') 
-A_DEPS = $(shell pkg-config --libs --cflags --static libSimpleAmqpClient msgpack librabbitmq opencv libssl | sed -E 's/rt\\;//g')
+SO_DEPS = $(shell pkg-config --libs --cflags libSimpleAmqpClient msgpack librabbitmq opencv)
+SO_DEPS += -lboost_program_options -I $(PWD)/../include -lpthread -lflycapture
 
 SRCS := $(shell find $(SOURCEDIR) -name '*.cpp')
 EXECS := $(SRCS:.cpp=)
 
-all: $(EXECS)
+all: ptgrey webcam image_viewer
 
 clean:
 	rm -f $(EXECS)
 
-%: %.cpp
-	$(COMPILER) $@.cpp -o $@ $(FLAGS) $(SO_DEPS) -lboost_program_options -I $(PWD)/../include -lpthread
+ptgrey: ptgrey/ptgrey.cpp
+	$(COMPILER) $^ -o $@/$@ $(FLAGS) $(SO_DEPS) 
+
+webcam: webcam/webcam.cpp
+	$(COMPILER) $^ -o $@/$@ $(FLAGS) $(SO_DEPS) 
+
+image_viewer: image_viewer/image_viewer.cpp
+	$(COMPILER) $^ -o $@/$@ $(FLAGS) $(SO_DEPS) 

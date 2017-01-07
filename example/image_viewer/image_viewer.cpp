@@ -36,27 +36,29 @@ int main(int argc, char* argv[]) {
     std::cout << description << std::endl;
     return 1;
   }
+
   record = vm.count("output");
 
   auto is = is::connect(uri);
   auto client = is::make_client(is);
   client.request(entity + ".set_fps", is::msgpack(fps));
   client.request(entity + ".set_resolution", is::msgpack(resolution));
-  if (imtype_str == "RGB")
+  
+  if (imtype_str == "RGB") {
     client.request(entity + ".set_image_type", is::msgpack(ImageType::RGB));
-  else if (imtype_str == "GRAY")
+  }
+  else if (imtype_str == "GRAY") {
     client.request(entity + ".set_image_type", is::msgpack(ImageType::GRAY));
+  }
 
   auto frames = is.subscribe({entity + ".frame"});
 
   cv::VideoWriter recorder;
-  
+
   if (record) {
-    //recorder.open(filename, CV_FOURCC('U', '2', '6', '4'), fps, cv::Size(resolution.width, resolution.height));
     recorder.open(filename, CV_FOURCC('P', 'I', 'M', '1'), 20.0, cv::Size(resolution.width, resolution.height));
-    //recorder.open(filename, CV_FOURCC('D', 'I', 'V', 'X'), fps, cv::Size(resolution.width, resolution.height));
   }
-  
+
   while (1) {
     auto message = is.consume(frames);
     auto image = is::msgpack<is::msg::camera::CompressedImage>(message);

@@ -60,7 +60,7 @@ struct Camera {
       },
       {
         "get_image_type", 
-        [&](is::Request request) -> is::Reply {
+        [&](is::Request) -> is::Reply {
           return is::msgpack(camera.get_image_type());
         }
       }

@@ -5,12 +5,14 @@
 #include <opencv2/videoio.hpp>
 #include <thread>
 #include "../msgs/camera.hpp"
+#include "../msgs/common.hpp"
 
 namespace is {
 namespace driver {
 
 using namespace std::chrono_literals;
 using namespace is::msg::camera;
+using namespace is::msg::common;
 
 struct Webcam {
   cv::VideoCapture webcam;
@@ -38,7 +40,7 @@ struct Webcam {
   double get_max_fps() { return 30.0; }
 
   void set_image_type(ImageType) {}
-  
+
   ImageType get_image_type() { return ImageType::RGB; }
 
   Resolution get_resolution() {
@@ -48,6 +50,8 @@ struct Webcam {
     resolution.height = webcam.get(cv::CAP_PROP_FRAME_HEIGHT);
     return resolution;
   }
+
+  void set_delay(Delay) {}
 
   cv::Mat get_frame() {
     cv::Mat frame;

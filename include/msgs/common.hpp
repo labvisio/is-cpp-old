@@ -12,7 +12,8 @@ namespace common {
 enum class Status { OK, FAILED };
 
 struct Delay {
-    uint64_t delay; // [ms]
+  int milliseconds;
+  MSGPACK_DEFINE_ARRAY(milliseconds);
 };
 
 }  // ::camera

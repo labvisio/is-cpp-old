@@ -1,4 +1,5 @@
 .vagrant/
 .vscode/
-example/image_viewer
-example/webcam
+example/image_viewer/image_viewer
+example/ptgrey/ptgrey
+example/webcam/webcam

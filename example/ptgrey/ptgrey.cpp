@@ -1,7 +1,7 @@
-#include "gateways/camera.hpp"
+#include "drivers/ptgrey.hpp"
 #include <boost/program_options.hpp>
 #include <iostream>
-#include "drivers/ptgrey.hpp"
+#include "gateways/camera.hpp"
 
 namespace po = boost::program_options;
 
