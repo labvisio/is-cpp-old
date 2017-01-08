@@ -29,8 +29,8 @@ int main(int argc, char* argv[]) {
     std::cout << description << std::endl;
     return 1;
   }
-
   is::driver::Pioneer robot;
+
   if (vm.count("serialport") && !vm.count("hostname")) {
     robot.connect(robot_serial_port);
   } else if (vm.count("hostname") && vm.count("port")) {

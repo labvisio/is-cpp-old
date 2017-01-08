@@ -23,6 +23,32 @@ struct Robot {
           robot.set_velocities(is::msgpack<Velocities>(request));
           return is::msgpack(Status::OK);
         }
+      },
+      {
+        "get_velocities",
+        [&](is::Request request) -> is::Reply {
+          return is::msgpack(robot.get_velocities());
+        }
+      },
+      {
+        "set_pose",
+        [&](is::Request request) -> is::Reply {
+          robot.set_pose(is::msgpack<Odometry>(request));
+          return is::msgpack(Status::OK);
+        }
+      },
+      {
+        "set_sample_rate",
+        [&](is::Request request) -> is::Reply {
+          robot.set_sample_rate(is::msgpack<SamplingRate>(request));
+          return is::msgpack(Status::OK);
+        }
+      },
+      {
+        "get_sample_rate",
+        [&](is::Request request) -> is::Reply {
+          return is::msgpack(robot.get_sample_rate());
+        }
       }
     });
     
