@@ -54,6 +54,7 @@ struct Robot {
     
     while (1) {
       is.publish(name + ".odometry", is::msgpack(robot.get_odometry()));
+      is.publish(name + ".timestamp", is::msgpack(robot.get_last_timestamp()));
     }
 
     thread.join();

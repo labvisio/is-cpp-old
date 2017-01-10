@@ -12,7 +12,7 @@
 #include "../logger.hpp"
 #include "../msgs/common.hpp"
 #include "../msgs/robot.hpp"
-#include "/usr/local/Aria/include/Aria.h"
+#include <Aria/include/Aria.h>
 
 namespace is {
 namespace driver {
@@ -52,6 +52,7 @@ struct Pioneer {
   int64_t period;  // [ms]
   int64_t delay;   // [ms]
   std::atomic<bool> apply_delay;
+  TimeStamp last_timestamp;
 
   Pioneer() {}
 
@@ -137,10 +138,15 @@ struct Pioneer {
 
   void set_delay(Delay d) {
     std::lock_guard<std::mutex> lock(mutex);
-    if (d.ms <= period) {
-      delay = d.ms;
+    if (d.milliseconds <= period) {
+      delay = d.milliseconds;
       apply_delay.store(true);
     }
+  }
+
+  TimeStamp get_last_timestamp() {
+    std::lock_guard<std::mutex> lock(mutex);
+    return last_timestamp;
   }
 
  private:
@@ -160,19 +166,20 @@ struct Pioneer {
       mutex.unlock();
 
       while (1) {
-        // Get timestamp
-        auto ts = system_clock::now();
-        // Get odometry
         mutex.lock();
+        // Get timestamp
+        last_timestamp = TimeStamp();
+        auto now = std::chrono::system_clock::now();
+        // Get odometry
         Odometry odo = {robot.getX(), robot.getY(), robot.getTh()};
         mutex.unlock();
         odometry.push(odo);
         // Sleep
         if (!apply_delay.load()) {
-          std::this_thread::sleep_until(ts + milliseconds(period));
+          std::this_thread::sleep_until(now + milliseconds(period));
         } else {
           apply_delay.store(false);
-          std::this_thread::sleep_until(ts + milliseconds(period + delay));
+          std::this_thread::sleep_until(now + milliseconds(period + delay));
         }
       }
     });
