@@ -5,17 +5,19 @@
 #include <opencv2/videoio.hpp>
 #include <thread>
 #include "../msgs/camera.hpp"
+#include "../msgs/common.hpp"
 
 namespace is {
 namespace driver {
 
 using namespace std::chrono_literals;
 using namespace is::msg::camera;
+using namespace is::msg::common;
 
 struct Webcam {
   cv::VideoCapture webcam;
   std::mutex mutex;
-  std::chrono::time_point<std::chrono::system_clock> last_frame_time_point;
+  TimeStamp last_timestamp;
 
   Webcam() : webcam(0) { assert(webcam.isOpened()); }
 
@@ -37,6 +39,8 @@ struct Webcam {
 
   double get_max_fps() { return 30.0; }
 
+  void set_image_type(ImageType) {}
+
   ImageType get_image_type() { return ImageType::RGB; }
 
   Resolution get_resolution() {
@@ -47,11 +51,19 @@ struct Webcam {
     return resolution;
   }
 
+  void set_delay(Delay) {}
+
   cv::Mat get_frame() {
     cv::Mat frame;
     std::lock_guard<std::mutex> lock(mutex);
     webcam >> frame;
+    last_timestamp = TimeStamp();
     return frame;
+  }
+
+  TimeStamp get_last_timestamp() {
+    std::lock_guard<std::mutex> lock(mutex);
+    return last_timestamp;
   }
 };
 

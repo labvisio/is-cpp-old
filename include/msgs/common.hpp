@@ -1,6 +1,7 @@
 #ifndef __IS_MSG_COMMON_HPP__
 #define __IS_MSG_COMMON_HPP__
 
+#include <chrono>
 #include <string>
 #include <vector>
 #include "../packer.hpp"
@@ -11,7 +12,21 @@ namespace common {
 
 enum class Status { OK, FAILED };
 
-}  // ::camera
+struct Delay {
+  int milliseconds;
+
+  MSGPACK_DEFINE_ARRAY(milliseconds);
+};
+
+struct TimeStamp {
+  int64_t time_point;
+
+  TimeStamp() { time_point = std::chrono::system_clock::now().time_since_epoch().count(); }
+
+  MSGPACK_DEFINE_ARRAY(time_point);
+};
+
+}  // ::common
 }  // ::msg
 }  // ::is
 

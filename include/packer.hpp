@@ -28,7 +28,7 @@ T msgpack(Envelope::ptr_t envelope) {
   auto body = message->Body();
   msgpack::object_handle handle = msgpack::unpack(body.data(), body.size());
   msgpack::object object = handle.get();
-  T data;
+  T data {};
   object.convert(data);
   return data;
 }

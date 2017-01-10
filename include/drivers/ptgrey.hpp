@@ -1,125 +1,187 @@
 #ifndef __IS_DRIVER_PTGREY_HPP__
 #define __IS_DRIVER_PTGREY_HPP__
 
-#include "FlyCapture2.h"
+#include <flycapture/FlyCapture2.h>
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <mutex>
+#include <numeric>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include <iostream>
-#include <cstdint>
-#include <vector>
 #include <string>
-#include <sstream>
-#include <iomanip>
-#include <thread>
-#include <chrono>
-#include <atomic>
-#include <algorithm>
-#include <memory>
-#include <tuple>
-#include <stdexcept>
-#include <mutex>
-#include <thread>
+#include "../logger.hpp"
 #include "../msgs/camera.hpp"
+#include "../msgs/common.hpp"
 
 namespace is {
 namespace driver {
 
 using namespace std::chrono_literals;
 using namespace is::msg::camera;
+using namespace is::msg::common;
 using namespace FlyCapture2;
 
+struct ErrorLogger {
+  ErrorLogger() {}
+
+  ErrorLogger(Error error) {
+    if (error != PGRERROR_OK) {
+      is::logger()->warn("[Ptgrey][{}][{}] {}", error.GetFilename(), error.GetLine(), error.GetDescription());
+    }
+  }
+};
+
 struct PtGrey {
-    GigECamera	camera;
-	PGRGuid* handle;
-    
-    PtGrey(std::string ip_address) { 
-        get_handle(ip_address, handle);
+  std::mutex mutex;
+
+  GigECamera camera;
+  PGRGuid* handle;
+
+  ImageType image_type;
+  PixelFormat pixel_format;
+  int cv_type;
+  TimeStamp last_timestamp;
+
+  ErrorLogger error;
+
+  PtGrey(std::string const& ip) : handle(new PGRGuid()) {
+    BusManager bus;
+    bus.GetCameraFromIPAddress(make_ip_address(ip), handle);
+    camera.Connect(handle);
+    set_packet_delay(6000);
+    set_packet_size(1400);
+    set_image_type(ImageType::RGB);
+    camera.StartCapture();
+  }
+
+  ~PtGrey() {
+    camera.Disconnect();
+    if (handle != nullptr) {
+      delete handle;
     }
+  }
 
-    void set_fps(double fps) {
+  void set_fps(double fps) {
+    std::lock_guard<std::mutex> lock(mutex);
 
+    Property property(FRAME_RATE);
+    error = camera.GetProperty(&property);
+
+    PropertyInfo info(FRAME_RATE);
+    error = camera.GetPropertyInfo(&info);
+
+    property.absValue = std::max(info.absMin, std::min(static_cast<float>(fps), info.absMax));
+    property.autoManualMode = false;
+
+    error = camera.SetProperty(&property);
+  }
+
+  double get_fps() {
+    std::lock_guard<std::mutex> lock(mutex);
+    Property property(FRAME_RATE);
+    error = camera.GetProperty(&property);
+    return static_cast<double>(property.absValue);
+  }
+
+  double get_max_fps() {
+    std::lock_guard<std::mutex> lock(mutex);
+    PropertyInfo info(FRAME_RATE);
+    error = camera.GetPropertyInfo(&info);
+    return static_cast<double>(info.absMax);
+  }
+
+  void set_resolution(Resolution resolution) {
+    std::lock_guard<std::mutex> lock(mutex);
+    if (resolution.width == 1288 && resolution.height == 728) {
+      camera.StopCapture();
+      error = camera.SetGigEImagingMode(MODE_0);
+      camera.StartCapture();
+    } else if (resolution.width == 644 && resolution.height == 364) {
+      camera.StopCapture();
+      error = camera.SetGigEImagingMode(MODE_1);
+      camera.StartCapture();
     }
+  }
 
-    double get_fps() {
-
+  Resolution get_resolution() {
+    std::lock_guard<std::mutex> lock(mutex);
+    Mode mode;
+    camera.GetGigEImagingMode(&mode);
+    switch (mode) {
+      case MODE_0:
+        return {1288, 728};
+      case MODE_1:
+        return {644, 364};
+      default:
+        return {0, 0};
     }
+  }
 
-    double get_max_fps() {
-
+  void set_image_type(ImageType image_type) {
+    std::lock_guard<std::mutex> lock(mutex);
+    this->image_type = image_type;
+    switch (image_type) {
+      case ImageType::GRAY:
+        pixel_format = FlyCapture2::PIXEL_FORMAT_MONO8;
+        cv_type = CV_8UC1;
+        break;
+      default:
+        pixel_format = FlyCapture2::PIXEL_FORMAT_BGR;
+        cv_type = CV_8UC3;
+        break;
     }
+  }
 
-    void set_resolution(Resolution resolution) {
+  ImageType get_image_type() { return image_type; }
 
-    }
+  void set_delay(Delay) {}
 
-    Resolution get_resolution() {
+  cv::Mat get_frame() {
+    std::lock_guard<std::mutex> lock(mutex);
 
-    }
+    Image buffer, image;
+    error = camera.RetrieveBuffer(&buffer);
+    last_timestamp = TimeStamp();   
+    buffer.Convert(pixel_format, &image);
+    cv::Mat frame(image.GetRows(), image.GetCols(), cv_type, image.GetData(), image.GetDataSize() / image.GetRows());
+    frame = frame.clone();
+    buffer.ReleaseBuffer();
+    image.ReleaseBuffer();
+    return frame;
+  }
 
-    void set_image_type(ImageType image_type) {
-        
-    }
+  TimeStamp get_last_timestamp() {
+    std::lock_guard<std::mutex> lock(mutex);
+    return last_timestamp;
+  }
 
-    ImageType get_image_type() { return ImageType::RGB; }
+ private:
+  void set_property(unsigned int value, GigEPropertyType type) {
+    GigEProperty property;
+    property.propType = type;
+    error = camera.GetGigEProperty(&property);
+    property.value = std::max(property.min, std::min(value, property.max));
+    error = camera.SetGigEProperty(&property);
+  }
 
-    cv::Mat get_frame() {
+  void set_packet_delay(unsigned int delay) { set_property(delay, FlyCapture2::PACKET_DELAY); }
 
-    }
+  void set_packet_size(unsigned int size) { set_property(size, FlyCapture2::PACKET_SIZE); }
 
-    /*-------------------------------------------------------------------*/
-     void get_handle(const std::string& ip_address, PRGuid* guid) {
-        BusManager bus;
-        Error error;
-        int ip_int = ip_to_int(ip_address.c_str());
-        if (!ip_int) {
-            throw std::runtime_error("Invalid IP address.");
-        }
-        IPAddress ip(ip_int);
-        error = bus.GetCameraFromIPAddress(ip, guid);
-        if (error != PGRERROR_OK) {
-            error.PrintErrorTrace();
-            throw std::runtime_error("Camera not found.");
-        }
-        unique_ptr<PointGrey> camera(new PointGrey(guid));
-        return camera;
-    }
-
-    std::vector<std::string> split(const std::string &s, char delim) {
-        std::stringstream ss(s);
-        std::string item;
-        std::vector<std::string> elems;
-        while (std::getline(ss, item, delim)) {
-            elems.push_back(item);
-        }
-        return elems;
-    }
-
-    int ip_to_int(const char* ip) {
-	    std::string data(ip);
-	    auto split_data = split(data,'.');
-	    int IP = 0;
-	    if (split_data.size()==4) {
-	    	int sl_num = 24;
-	    	int mask = 0xff000000;
-	    	for ( auto& d : split_data) {
-	    		int octets = stoi(d); 
-	    		if ( ( octets >> 8) && 0xffffff00 ) {
-	    			return 0; //error
-	    		}
-	    		IP += (octets << sl_num);
-	    		sl_num -= 8;
-	    	}
-	    	return IP;
-	    }
-	    return 0;
-    }
-
-}
-
+  IPAddress make_ip_address(std::string const& ip) {
+    std::vector<std::string> fields;
+    boost::split(fields, ip, boost::is_any_of("."), boost::token_compress_on);
+    auto reducer = [i = 8 * (fields.size() - 1)](auto total, auto current) mutable {
+      total += (std::stoi(current) << i);
+      i -= 8;
+      return total;
+    };
+    IPAddress address = std::accumulate(std::begin(fields), std::end(fields), 0, reducer);
+    return address;
+  }
 };
 
 }  // ::driver
 }  // ::is
 
-
-#endif  // __IS_DRIVER_PTGREY_HPP__ 
+#endif  // __IS_DRIVER_PTGREY_HPP__
