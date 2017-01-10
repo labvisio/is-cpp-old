@@ -12,10 +12,10 @@ all: ptgrey/ptgrey webcam/webcam image_viewer/image_viewer
 clean:
 	rm -f $(EXECS)
 
-ptgrey/ptgrey: ptgrey/ptgrey.cpp
+ptgrey/ptgrey: ptgrey/ptgrey.cpp ../include/drivers/ptgrey.hpp
 	$(COMPILER) $^ -o $@ $(FLAGS) $(SO_DEPS) 
 
-webcam/webcam: webcam/webcam.cpp
+webcam/webcam: webcam/webcam.cpp ../include/drivers/webcam.hpp
 	$(COMPILER) $^ -o $@ $(FLAGS) $(SO_DEPS) 
 
 image_viewer/image_viewer: image_viewer/image_viewer.cpp

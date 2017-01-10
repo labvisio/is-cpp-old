@@ -45,8 +45,8 @@ struct PtGrey {
 
   PtGrey(std::string const& ip) : handle(new PGRGuid()) {
     BusManager bus;
-    error = bus.GetCameraFromIPAddress(make_ip_address(ip), handle);
-    error = camera.Connect(handle);
+    bus.GetCameraFromIPAddress(make_ip_address(ip), handle);
+    camera.Connect(handle);
     set_packet_delay(6000);
     set_packet_size(1400);
     set_image_type(ImageType::RGB);
@@ -164,7 +164,7 @@ struct PtGrey {
   IPAddress make_ip_address(std::string const& ip) {
     std::vector<std::string> fields;
     boost::split(fields, ip, boost::is_any_of("."), boost::token_compress_on);
-    auto reducer = [i = 8 * fields.size()](auto total, auto current) mutable {
+    auto reducer = [i = 8 * (fields.size() - 1)](auto total, auto current) mutable {
       total += (std::stoi(current) << i);
       i -= 8;
       return total;
