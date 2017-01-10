@@ -17,7 +17,7 @@ using namespace is::msg::common;
 struct Webcam {
   cv::VideoCapture webcam;
   std::mutex mutex;
-  std::chrono::time_point<std::chrono::system_clock> last_frame_time_point;
+  TimeStamp last_timestamp;
 
   Webcam() : webcam(0) { assert(webcam.isOpened()); }
 
@@ -57,7 +57,13 @@ struct Webcam {
     cv::Mat frame;
     std::lock_guard<std::mutex> lock(mutex);
     webcam >> frame;
+    last_timestamp = TimeStamp();
     return frame;
+  }
+
+  TimeStamp get_last_timestamp() {
+    std::lock_guard<std::mutex> lock(mutex);
+    return last_timestamp;
   }
 };
 

@@ -7,7 +7,7 @@ SO_DEPS += -lboost_program_options -I $(PWD)/../include -lpthread -lflycapture
 SRCS := $(shell find $(SOURCEDIR) -name '*.cpp')
 EXECS := $(SRCS:.cpp=)
 
-all: ptgrey/ptgrey webcam/webcam image_viewer/image_viewer
+all: ptgrey/ptgrey webcam/webcam image_viewer/image_viewer ts_viewer/ts_viewer
 
 clean:
 	rm -f $(EXECS)
@@ -19,4 +19,7 @@ webcam/webcam: webcam/webcam.cpp ../include/drivers/webcam.hpp
 	$(COMPILER) $^ -o $@ $(FLAGS) $(SO_DEPS) 
 
 image_viewer/image_viewer: image_viewer/image_viewer.cpp
+	$(COMPILER) $^ -o $@ $(FLAGS) $(SO_DEPS)
+
+ts_viewer/ts_viewer: ts_viewer/ts_viewer.cpp
 	$(COMPILER) $^ -o $@ $(FLAGS) $(SO_DEPS) 

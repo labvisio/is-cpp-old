@@ -68,10 +68,12 @@ struct Camera {
     
     while (1) {
       cv::Mat frame = camera.get_frame();
+      TimeStamp ts = camera.get_last_timestamp();
       CompressedImage image;
       image.format = ".png";
       cv::imencode(image.format, frame, image.data);
-      is.publish(name + ".frame", is::msgpack(image));
+      is.publish(name + ".frame", is::msgpack(image));      
+      is.publish(name + ".timestamp", is::msgpack(ts));
     }
 
     thread.join();

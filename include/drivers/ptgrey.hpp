@@ -40,6 +40,7 @@ struct PtGrey {
   ImageType image_type;
   PixelFormat pixel_format;
   int cv_type;
+  TimeStamp last_timestamp;
 
   ErrorLogger error;
 
@@ -140,12 +141,18 @@ struct PtGrey {
 
     Image buffer, image;
     error = camera.RetrieveBuffer(&buffer);
+    last_timestamp = TimeStamp();   
     buffer.Convert(pixel_format, &image);
     cv::Mat frame(image.GetRows(), image.GetCols(), cv_type, image.GetData(), image.GetDataSize() / image.GetRows());
     frame = frame.clone();
     buffer.ReleaseBuffer();
     image.ReleaseBuffer();
     return frame;
+  }
+
+  TimeStamp get_last_timestamp() {
+    std::lock_guard<std::mutex> lock(mutex);
+    return last_timestamp;
   }
 
  private:
