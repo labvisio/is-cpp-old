@@ -21,9 +21,16 @@ struct Webcam {
 
   Webcam() : webcam(0) { assert(webcam.isOpened()); }
 
-  void set_fps(double fps) {
+  void set_sample_rate(SamplingRate sample_rate) {
     std::lock_guard<std::mutex> lock(mutex);
-    webcam.set(cv::CAP_PROP_FPS, fps);
+    double fps ;
+    if (sample_rate.rate == 0.0 && sample_rate.period > 0) {
+      fps = static_cast<double>(1000/sample_rate.period);
+      webcam.set(cv::CAP_PROP_FPS, fps);
+    } else if (sample_rate.rate > 0.0 && sample_rate.period == 0) {
+      fps = sample_rate.rate;
+      webcam.set(cv::CAP_PROP_FPS, fps);
+    }
   }
 
   void set_resolution(Resolution resolution) {
@@ -32,9 +39,9 @@ struct Webcam {
     webcam.set(cv::CAP_PROP_FRAME_HEIGHT, resolution.height);
   }
 
-  double get_fps() {
+  SamplingRate get_sample_rate() {
     std::lock_guard<std::mutex> lock(mutex);
-    return webcam.get(cv::CAP_PROP_FPS);
+    return {webcam.get(cv::CAP_PROP_FPS)};
   }
 
   double get_max_fps() { return 30.0; }

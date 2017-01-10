@@ -61,7 +61,7 @@ struct PtGrey {
     }
   }
 
-  void set_fps(double fps) {
+  void set_sample_rate(SamplingRate sample_rate) {
     std::lock_guard<std::mutex> lock(mutex);
 
     Property property(FRAME_RATE);
@@ -70,17 +70,24 @@ struct PtGrey {
     PropertyInfo info(FRAME_RATE);
     error = camera.GetPropertyInfo(&info);
 
-    property.absValue = std::max(info.absMin, std::min(static_cast<float>(fps), info.absMax));
+    float fps;
+    if (sample_rate.rate == 0.0 && sample_rate.period > 0) {
+      fps = static_cast<float>(1000/sample_rate.period);
+    } else if (sample_rate.rate > 0.0 && sample_rate.period == 0) {
+      fps = static_cast<float>(sample_rate.rate);
+    }
+
+    property.absValue = std::max(info.absMin, std::min(fps, info.absMax));
     property.autoManualMode = false;
 
     error = camera.SetProperty(&property);
   }
 
-  double get_fps() {
+  SamplingRate get_sample_rate() {
     std::lock_guard<std::mutex> lock(mutex);
     Property property(FRAME_RATE);
     error = camera.GetProperty(&property);
-    return static_cast<double>(property.absValue);
+    return {static_cast<double>(property.absValue)};
   }
 
   double get_max_fps() {
@@ -141,7 +148,7 @@ struct PtGrey {
 
     Image buffer, image;
     error = camera.RetrieveBuffer(&buffer);
-    last_timestamp = TimeStamp();   
+    last_timestamp = TimeStamp();
     buffer.Convert(pixel_format, &image);
     cv::Mat frame(image.GetRows(), image.GetCols(), cv_type, image.GetData(), image.GetDataSize() / image.GetRows());
     frame = frame.clone();

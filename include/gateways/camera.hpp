@@ -19,9 +19,9 @@ struct Camera {
   Camera(std::string const& name, std::string const& uri, ThreadSafeCameraDriver & camera) : is(is::connect(uri)) {
     auto thread = is::advertise(uri, name, {
       {
-        "set_fps",
+        "set_sample_rate",
         [&](is::Request request) -> is::Reply {
-          camera.set_fps(is::msgpack<double>(request));
+          camera.set_sample_rate(is::msgpack<SamplingRate>(request));
           return is::msgpack(Status::OK);
         }
       },
@@ -47,9 +47,9 @@ struct Camera {
         }
       },
       {
-        "get_fps",
+        "get_sample_rate",
         [&](is::Request) -> is::Reply {
-          return is::msgpack(camera.get_fps());
+          return is::msgpack(camera.get_sample_rate());
         }
       },
       {

@@ -12,6 +12,7 @@ int main(int argc, char* argv[]) {
   std::string uri;
   std::string entity;
   is::msg::camera::Resolution resolution;
+  is::msg::common::SamplingRate sample_rate;
   double fps;
   std::string imtype_str;
   std::string filename;
@@ -24,7 +25,7 @@ int main(int argc, char* argv[]) {
   options("entity,e", po::value<std::string>(&entity), "entity name");
   options("height,h", po::value<int>(&resolution.height)->default_value(480), "image height");
   options("width,w", po::value<int>(&resolution.width)->default_value(640), "image width");
-  options("fps,f", po::value<double>(&fps)->default_value(30.0), "frames per second");
+  options("fps,f", po::value<double>(&fps)->default_value(10.0), "frames per second");
   options("type,t", po::value<std::string>(&imtype_str)->default_value("RGB"), "image type");
   options("output,o", po::value<std::string>(&filename), "output video vile");
 
@@ -41,7 +42,9 @@ int main(int argc, char* argv[]) {
 
   auto is = is::connect(uri);
   auto client = is::make_client(is);
-  client.request(entity + ".set_fps", is::msgpack(fps));
+  
+  sample_rate = {fps};
+  client.request(entity + ".set_sample_rate", is::msgpack(sample_rate));
   client.request(entity + ".set_resolution", is::msgpack(resolution));
   
   if (imtype_str == "RGB") {
