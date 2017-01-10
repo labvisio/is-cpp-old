@@ -1,52 +1,78 @@
 #ifndef __IS_SERVICE_CLIENT_HPP__
 #define __IS_SERVICE_CLIENT_HPP__
 
-#include <SimpleAmqpClient/SimpleAmqpClient.h>
+#include <string>
+#include <map>
+
+#include <amqpcpp.h>
+#include <amqpcpp/libev.h>
+#include <ev.h>
+
+#include <boost/fiber/all.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
+#include "logger.hpp"
 
 namespace is {
 
-class ServiceClient {
-  Channel::ptr_t channel;
-  int correlation_id;
-  std::string rpc_queue;
-  std::string rpc_tag;
+struct ServiceClient {
+  AMQP::TcpChannel channel;
 
- public:
-  ServiceClient(Channel::ptr_t channel) : channel(channel), correlation_id(0) {
-    // queue_name, passive, durable, exclusive, auto_delete
-    rpc_queue = channel->DeclareQueue("", false, false, true, true);
-    channel->BindQueue(rpc_queue, "amq.topic", rpc_queue);
-    // no_local, no_ack, exclusive
-    rpc_tag = channel->BasicConsume(rpc_queue, "", true, true, true);
-  }
+  boost::uuids::random_generator generator;
+  std::map<std::string, boost::fibers::promise<AMQP::Message>> requests;
+  std::string reply_queue;
 
-  std::string request(std::string const& route, BasicMessage::ptr_t message) {
-    auto id = std::to_string(correlation_id);
-    message->CorrelationId(id);
-    ++correlation_id;
+  ServiceClient(Connection& c) : channel(&c.connection) { make_reply_queue(); }
 
-    bool mandatory{true};  // fail fast if no service provider exists on the
-                           // specified route
+  auto request(std::string const& route, AMQP::Envelope&& envelope) {
+    boost::uuids::uuid id = generator();
+    auto correlation_id = boost::uuids::to_string(id);
+    envelope.setCorrelationID(correlation_id);
 
     auto&& pos = route.find_first_of(';');
     if (pos == std::string::npos || pos + 1 > route.size()) {
-      message->ReplyTo(rpc_queue);
-      channel->BasicPublish("amq.topic", route, message, mandatory);
+      envelope.setReplyTo(reply_queue);
+      channel.publish("amq.topic", route, envelope);
     } else {
-      message->ReplyTo(route.substr(pos + 1) + ';' + rpc_queue);
-      channel->BasicPublish("amq.topic", route.substr(0, pos), message, mandatory);
+      envelope.setReplyTo(route.substr(pos + 1) + ';' + reply_queue);
+      channel.publish("amq.topic", route.substr(0, pos), envelope);
     }
 
-    return id;
+    boost::fibers::promise<AMQP::Message> promise;
+    auto&& future = promise.get_future();
+    requests.emplace(correlation_id, std::move(promise));
+
+    return std::move(future);
   }
 
-  template <typename Time>
-  Envelope::ptr_t receive(Time const& timeout) {
-    using namespace std::chrono;
-    int timeout_ms = duration_cast<milliseconds>(timeout).count();
-    Envelope::ptr_t envelope;
-    channel->BasicConsumeMessage(rpc_tag, envelope, timeout_ms);
-    return envelope;
+  void make_reply_queue() {
+    auto&& on_success = [&](const std::string& queue, uint32_t, uint32_t) {
+      channel.bindQueue("amq.topic", queue, queue);
+      reply_queue = queue;
+
+      auto&& on_received = [&](const AMQP::Message& message, uint64_t, bool) {
+        auto it = requests.find(message.correlationID());
+
+        if (it != std::end(requests)) {
+          it->second.set_value(message);
+          requests.erase(it);
+          boost::this_fiber::yield();
+        }
+      };
+
+      auto&& on_success = [&]() { ev_break(EV_DEFAULT, EVBREAK_ALL); };
+
+      channel.consume(queue, AMQP::noack)
+          .onReceived(on_received)
+          .onSuccess(on_success);
+    };
+
+    channel.declareQueue(AMQP::exclusive + AMQP::autodelete)
+        .onSuccess(on_success);
+
+    ev_run(EV_DEFAULT, 0);
   }
 
 };  // ServiceClient

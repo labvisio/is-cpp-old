@@ -1,7 +1,7 @@
 #ifndef __IS_PACKER_HPP__
 #define __IS_PACKER_HPP__
 
-#include <SimpleAmqpClient/SimpleAmqpClient.h>
+#include <amqpcpp.h>
 #include <msgpack.hpp>
 #include <sstream>
 
@@ -11,22 +11,18 @@
 
 namespace is {
 
-using namespace AmqpClient;
-
 template <typename T>
-BasicMessage::ptr_t msgpack(T const& data) {
+AMQP::Envelope msgpack(T const& data) {
   std::stringstream body;
   msgpack::pack(body, data);
-  auto message = BasicMessage::Create(body.str());
-  message->ContentEncoding("msgpack");
-  return message;
+  auto envelope = AMQP::Envelope{body.str()};
+  envelope.setContentEncoding("msgpack");
+  return envelope;
 }
 
 template <typename T>
-T msgpack(Envelope::ptr_t envelope) {
-  auto message = envelope->Message();
-  auto body = message->Body();
-  msgpack::object_handle handle = msgpack::unpack(body.data(), body.size());
+T msgpack(AMQP::Message const& message) {
+  msgpack::object_handle handle = msgpack::unpack(message.body(), message.bodySize());
   msgpack::object object = handle.get();
   T data;
   object.convert(data);

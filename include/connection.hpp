@@ -1,56 +1,113 @@
 #ifndef __IS_CONNECTION_HPP__
 #define __IS_CONNECTION_HPP__
 
-#include <SimpleAmqpClient/SimpleAmqpClient.h>
-#include <chrono>
 #include <string>
 #include <vector>
-#include "helpers.hpp"
+#include <memory>
+
+#include <ev.h>
+#include <amqpcpp.h>
+#include <amqpcpp/libev.h>
+
+#include <boost/fiber/all.hpp>
+
+#include "logger.hpp"
 
 namespace is {
 
-using namespace AmqpClient;
+using Channel = boost::fibers::unbounded_channel<AMQP::Message>;
 
-struct Connection {
-  Channel::ptr_t channel;
+struct Connection : AMQP::LibEvHandler {
+  AMQP::TcpConnection connection;
+  AMQP::TcpChannel channel;
 
-  Connection(Channel::ptr_t channel) : channel(channel) {}
+  void onConnected(AMQP::TcpConnection* connection) override {
+    logger()->info("Connected");
+  }
 
-  void publish(std::string const& topic, BasicMessage::ptr_t message) {
-    bool mandatory{false};
-    if (!message->TimestampIsSet()) {
-      set_timestamp(message);
+  void onError(AMQP::TcpConnection* connection, const char* message) override {
+    logger()->error("Connection error: \"{}\"", message);
+    exit(-1);
+  }
+
+  void onClosed(AMQP::TcpConnection* connection) override {
+    logger()->error("Connection closed...");
+    exit(-1);
+  }
+
+  Connection(std::string const& uri)
+      : AMQP::LibEvHandler(EV_DEFAULT),
+        connection(this, AMQP::Address(uri)),
+        channel(&connection) {
+    bool ready = false;
+    channel.onError([](const char* error) {
+      logger()->error("Channel error \"{}\"", error);
+    });
+
+    channel.onReady([&ready]() {
+      ready = true;
+      ev_break(EV_DEFAULT, EVBREAK_ALL);
+    });
+
+    ev_timer timer;
+    ev_timer_init(&timer, [](struct ev_loop*, ev_timer*,
+                             int) { ev_break(EV_DEFAULT, EVBREAK_ALL); },
+                  2.0, 0.0);
+    ev_timer_start(EV_DEFAULT, &timer);
+
+    logger()->info("Trying to connect to \"{}\"", uri);
+    ev_run(EV_DEFAULT, 0);
+
+    ev_timer_stop(EV_DEFAULT, &timer);
+
+    if (!ready) {
+      logger()->error("Connection failed...");
+      exit(-1);
     }
-    channel->BasicPublish("amq.topic", topic, message, mandatory);
   }
 
-  std::string subscribe(std::vector<std::string> const& topics) {
-    // queue_name, passive, durable, exclusive, auto_delete
-    Table arguments{{TableKey("x-max-length"), TableValue(1)}};
-    auto queue = channel->DeclareQueue("", false, false, true, true, arguments);
-
-    for (auto& topic : topics) {
-      channel->BindQueue(queue, "amq.topic", topic);
-    }
-
-    // no_local, no_ack, exclusive
-    return channel->BasicConsume(queue, "", true, true, true);
+  void publish(std::string const& topic, AMQP::Envelope const& envelope) {
+    channel.publish("amq.topic", topic, envelope);
   }
 
-  Envelope::ptr_t consume(std::string const& tag) {
-    Envelope::ptr_t envelope = channel->BasicConsumeMessage(tag);
-    return envelope;
+  std::shared_ptr<Channel> subscribe(std::string const& topic) {
+    AMQP::Table arguments;
+    arguments["x-max-length"] = 1;
+
+    auto c = std::make_shared<Channel>();
+    auto on_success = [this, topic, c](std::string const& queue, uint32_t,
+                                       uint32_t) {
+      logger()->info("Subscribing to \"{}\" on queue \"{}\"", topic, queue);
+      channel.bindQueue("amq.topic", queue, topic);
+      channel.consume(queue, AMQP::noack)
+          .onReceived([this, c](AMQP::Message const& message, uint64_t, bool) {
+            c->push(message);
+            boost::this_fiber::yield();
+          });
+    };
+
+    channel.declareQueue(AMQP::exclusive + AMQP::autodelete, arguments)
+        .onSuccess(on_success);
+    
+    return c;
   }
 
-  template <typename Time>
-  Envelope::ptr_t consume(std::string const& tag, Time const& timeout) {
-    using namespace std::chrono;
-    int timeout_ms = duration_cast<milliseconds>(timeout).count();
-    Envelope::ptr_t envelope;
-    channel->BasicConsumeMessage(tag, envelope, timeout_ms);
-    return envelope;
+  template <typename Fn, typename... Args>
+  void subscribe(std::string const& topic, Fn fn, Args&&... args) {
+    auto queue = subscribe(topic);
+
+    boost::fibers::fiber fiber(
+        [this, queue](Fn&& fn, Args&&... args) {
+          while (1) {
+            fn(queue, std::forward<Args>(args)...);
+          }
+        },
+        std::forward<Fn>(fn), std::forward<Args>(args)...);
+
+    fiber.detach();
   }
-};
+
+};  // Connection
 
 }  // ::is
 
