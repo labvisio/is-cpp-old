@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
   }
 
   if (vm.count("period")) {
-    is::msg::robot::SamplingRate sample_rate { period };
+    is::msg::common::SamplingRate sample_rate { period };
     client.request(entity + ".set_sample_rate", is::msgpack(sample_rate));
   }
 

@@ -22,25 +22,6 @@ struct Velocities {
   MSGPACK_DEFINE_ARRAY(v, w);
 };
 
-struct SamplingRate {
-  double rate;     // [Hz]
-  int64_t period;  // [ms]
-
-  SamplingRate() {}
-
-  SamplingRate(double r) {
-    rate = r;
-    period = 0;
-  }
-
-  SamplingRate(int64_t p) {
-    period = p;
-    rate = 0.0;
-  }
-
-  MSGPACK_DEFINE_ARRAY(rate, period);
-};
-
 }  // ::robot
 }  // ::msg
 }  // ::is
