@@ -128,16 +128,24 @@ struct PtGrey {
   void set_image_type(ImageType image_type) {
     std::lock_guard<std::mutex> lock(mutex);
     this->image_type = image_type;
+    GigEImageSettings settings;
+    camera.StopCapture();
+    error = camera.GetGigEImageSettings(&settings);
     switch (image_type) {
       case ImageType::GRAY:
-        pixel_format = FlyCapture2::PIXEL_FORMAT_MONO8;
+        pixel_format = PIXEL_FORMAT_MONO8;
         cv_type = CV_8UC1;
+        settings.pixelFormat = PIXEL_FORMAT_MONO8;
         break;
       default:
-        pixel_format = FlyCapture2::PIXEL_FORMAT_BGR;
+        pixel_format = PIXEL_FORMAT_BGR;
         cv_type = CV_8UC3;
+        settings.pixelFormat = PIXEL_FORMAT_RAW8;
+        // settings.pixelFormat = PIXEL_FORMAT_RGB8;
         break;
     }
+    error = camera.SetGigEImageSettings(&settings);
+    camera.StartCapture();
   }
 
   ImageType get_image_type() { return image_type; }
@@ -185,9 +193,9 @@ struct PtGrey {
     error = camera.SetGigEProperty(&property);
   }
 
-  void set_packet_delay(unsigned int delay) { set_property(delay, FlyCapture2::PACKET_DELAY); }
+  void set_packet_delay(unsigned int delay) { set_property(delay, PACKET_DELAY); }
 
-  void set_packet_size(unsigned int size) { set_property(size, FlyCapture2::PACKET_SIZE); }
+  void set_packet_size(unsigned int size) { set_property(size, PACKET_SIZE); }
 
   IPAddress make_ip_address(std::string const& ip) {
     std::vector<std::string> fields;
