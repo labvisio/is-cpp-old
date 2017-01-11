@@ -7,7 +7,8 @@ SO_DEPS += -lboost_program_options -I $(PWD)/../include -lpthread -lflycapture
 SRCS := $(shell find $(SOURCEDIR) -name '*.cpp')
 EXECS := $(SRCS:.cpp=)
 
-all: ptgrey/ptgrey webcam/webcam image_viewer/image_viewer ts_viewer/ts_viewer sync/sync sync_request/sync_request
+all: ptgrey/ptgrey webcam/webcam image_viewer/image_viewer ts_viewer/ts_viewer \
+	 sync/sync sync_request/sync_request save_images/save_images
 
 clean:
 	rm -f $(EXECS)
@@ -28,4 +29,7 @@ sync/sync: sync/sync.cpp
 	$(COMPILER) $^ -o $@ $(FLAGS) $(SO_DEPS)
 	
 sync_request/sync_request: sync_request/sync_request.cpp
+	$(COMPILER) $^ -o $@ $(FLAGS) $(SO_DEPS)
+
+save_images/save_images: save_images/save_images.cpp
 	$(COMPILER) $^ -o $@ $(FLAGS) $(SO_DEPS)
