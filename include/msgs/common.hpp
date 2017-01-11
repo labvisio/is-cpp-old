@@ -45,6 +45,18 @@ struct SamplingRate {
   MSGPACK_DEFINE_ARRAY(rate, period);
 };
 
+struct EntityList {
+  std::vector<std::string> list;
+
+  EntityList() {}
+
+  EntityList(std::vector<std::string> l) {
+    list = l;
+  }
+
+  MSGPACK_DEFINE_ARRAY(list);
+};
+
 }  // ::common
 }  // ::msg
 }  // ::is
