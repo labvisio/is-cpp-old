@@ -51,6 +51,7 @@ struct PtGrey {
     set_packet_delay(6000);
     set_packet_size(1400);
     set_image_type(ImageType::RGB);
+    set_sample_rate({1.0});
     camera.StartCapture();
   }
 
@@ -72,7 +73,7 @@ struct PtGrey {
 
     float fps;
     if (sample_rate.rate == 0.0 && sample_rate.period > 0) {
-      fps = static_cast<float>(1000/sample_rate.period);
+      fps = static_cast<float>(1000 / sample_rate.period);
     } else if (sample_rate.rate > 0.0 && sample_rate.period == 0) {
       fps = static_cast<float>(sample_rate.rate);
     }
@@ -141,7 +142,20 @@ struct PtGrey {
 
   ImageType get_image_type() { return image_type; }
 
-  void set_delay(Delay) {}
+  void set_delay(Delay delay) {
+    std::lock_guard<std::mutex> lock(mutex);
+
+    Property property(TRIGGER_DELAY);
+    error = camera.GetProperty(&property);
+
+    PropertyInfo info(TRIGGER_DELAY);
+    error = camera.GetPropertyInfo(&info);
+
+    property.absValue = std::max(info.absMin, std::min(static_cast<float>(delay.milliseconds) / 1000.0f, info.absMax));
+    property.onOff = true;
+
+    error = camera.SetProperty(&property);
+  }
 
   cv::Mat get_frame() {
     std::lock_guard<std::mutex> lock(mutex);
