@@ -26,6 +26,27 @@ struct TimeStamp {
   MSGPACK_DEFINE_ARRAY(time_point);
 };
 
+struct Point2d {
+  double x, y;
+  
+  MSGPACK_DEFINE_ARRAY(x, y);
+};
+
+struct Pattern {
+  std::vector<Point2d> points;
+  bool found;
+  
+  MSGPACK_DEFINE_ARRAY(points, found);
+
+  Pattern () {}
+  Pattern (bool found) {
+    this->found = found;
+  }
+
+
+};
+
+
 }  // ::common
 }  // ::msg
 }  // ::is
