@@ -1,11 +1,23 @@
 #include <boost/program_options.hpp>
 #include <iostream>
+#include <chrono>
 #include <opencv2/highgui.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/core/core.hpp>
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include "drivers/webcam.hpp"
 #include "gateways/camera.hpp"
 #include "is.hpp"
+#include "msgs/common.hpp"
+#include "msgs/camera.hpp"
 
+#include <../example/find_pattern/find_pattern.hpp>
+
+using namespace std::chrono_literals;
 using namespace is::msg::camera;
+using namespace is::msg::common;
 namespace po = boost::program_options;
 
 int main(int argc, char* argv[]) {
@@ -14,8 +26,6 @@ int main(int argc, char* argv[]) {
   is::msg::camera::Resolution resolution;
   double fps;
   std::string imtype_str;
-  std::string filename;
-  bool record = false;
 
   po::options_description description("Allowed options");
   auto&& options = description.add_options();
@@ -26,7 +36,6 @@ int main(int argc, char* argv[]) {
   options("width,w", po::value<int>(&resolution.width)->default_value(640), "image width");
   options("fps,f", po::value<double>(&fps)->default_value(30.0), "frames per second");
   options("type,t", po::value<std::string>(&imtype_str)->default_value("RGB"), "image type");
-  options("output,o", po::value<std::string>(&filename), "output video vile");
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, description), vm);
@@ -37,39 +46,45 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  record = vm.count("output");
-
   auto is = is::connect(uri);
-
   auto client = is::make_client(is);
+
+  auto image_type = [&] () { return (imtype_str == "RGB") ? ImageType::RGB : ImageType::GRAY; }();
   client.request(entity + ".set_fps", is::msgpack(fps));
   client.request(entity + ".set_resolution", is::msgpack(resolution));
-  
-  if (imtype_str == "RGB") {
-    client.request(entity + ".set_image_type", is::msgpack(ImageType::RGB));
-  }
-  else if (imtype_str == "GRAY") {
-    client.request(entity + ".set_image_type", is::msgpack(ImageType::GRAY));
-  }
+  client.request(entity + ".set_image_type", is::msgpack(image_type));
+  while (client.receive(1s) != nullptr);
 
   auto frames = is.subscribe({entity + ".frame"});
 
-  cv::VideoWriter recorder;
-
-  if (record) {
-    recorder.open(filename, CV_FOURCC('P', 'I', 'M', '1'), 20.0, cv::Size(resolution.width, resolution.height));
-  }
-
   while (1) {
-    auto message = is.consume(frames);
-    auto image = is::msgpack<is::msg::camera::CompressedImage>(message);
-    cv::Mat frame = cv::imdecode(image.data, CV_LOAD_IMAGE_COLOR);
-    if (!record) {
-      cv::imshow("Webcam stream", frame);
+    cv::Mat frame;
+    auto image_message = is.consume(frames);
+    auto image = is::msgpack<is::msg::camera::CompressedImage>(image_message);
+    Pattern pattern;
+
+      auto req_id = client.request("pattern.find", image_message->Message());
+      auto reply = client.receive(1s);
+      frame = cv::imdecode(image.data, CV_LOAD_IMAGE_COLOR);
+      if (reply != nullptr) {
+        if (reply->Message()->CorrelationId() == req_id) {
+          pattern = is::msgpack<Pattern>(reply);
+          if (pattern.found) {
+            bool first = true;
+            for (auto& p : pattern.points) {
+              cv::circle(frame, cv::Point2d(p.x, p.y), 3, first ? cv::Scalar(0, 0, 255) : cv::Scalar(0, 255, 0), 3);
+              first = false;
+            }
+          }
+        } else {
+          is::logger()->warn("Invalid correlation id.");
+       }
+      } else {
+        is::logger()->warn("Empty message.");
+      }
+
+      cv::imshow("Pattern", frame);
       cv::waitKey(1);
-    } else {
-      recorder.write(frame);
     }
+    return 0;
   }
-  return 0;
-}

@@ -38,19 +38,16 @@ struct PointDist {
   double distance;
 };
 
-void draw_contours(std::vector<std::vector<cv::Point>> const &contours,
-                   cv::Mat &output, cv::Size size) {
+void draw_contours(std::vector<std::vector<cv::Point>> const& contours, cv::Mat& output, cv::Size size) {
   output = cv::Mat::zeros(size, CV_8UC3);
   cv::RNG rng(12345);
   for (int i = 0; i < (int)contours.size(); i++) {
-    cv::Scalar color = cv::Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
-                                  rng.uniform(0, 255));
+    cv::Scalar color = cv::Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
     cv::drawContours(output, contours, i, color);
   }
 }
 
-void draw_contour(std::vector<std::vector<cv::Point>> const &contours,
-                  cv::Mat &output) {
+void draw_contour(std::vector<std::vector<cv::Point>> const& contours, cv::Mat& output) {
   cv::cvtColor(output, output, CV_GRAY2BGR);
   for (int i = 0; i < (int)contours.size(); i++) {
     cv::Scalar color = cv::Scalar(0, 0, 255);
@@ -58,29 +55,24 @@ void draw_contour(std::vector<std::vector<cv::Point>> const &contours,
   }
 }
 
-auto compare_distance = [](PointDist const &x, PointDist const &y) {
-  return x.distance < y.distance;
-};
+auto compare_distance = [](PointDist const& x, PointDist const& y) { return x.distance < y.distance; };
 
-void erase_point(std::vector<cv::Point2d> &v, cv::Point2d const &pt) {
+void erase_point(std::vector<cv::Point2d>& v, cv::Point2d const& pt) {
   v.erase(std::remove(v.begin(), v.end(), pt), v.end());
 }
 
-std::vector<PointDist>
-distance_to_straight(cv::Point2d const &vec_dir, cv::Point2d const &ref,
-                     std::vector<cv::Point2d> const &points) {
+std::vector<PointDist> distance_to_straight(cv::Point2d const& vec_dir, cv::Point2d const& ref,
+                                            std::vector<cv::Point2d> const& points) {
   std::vector<PointDist> v;
   PointDist v_aux;
-  for (auto &p : points) {
+  for (auto& p : points) {
     v.push_back({p, cv::norm(vec_dir.cross(p - ref))});
   }
   return v;
 }
 
-std::vector<cv::Point2d> nearest_points(cv::Point2d const &vec_dir,
-                                        cv::Point2d const &ref,
-                                        std::vector<cv::Point2d> const &points,
-                                        int const &qnt_nearest) {
+std::vector<cv::Point2d> nearest_points(cv::Point2d const& vec_dir, cv::Point2d const& ref,
+                                        std::vector<cv::Point2d> const& points, int const& qnt_nearest) {
   std::vector<cv::Point2d> n_pts;
   std::vector<PointDist> v = distance_to_straight(vec_dir, ref, points);
   std::sort(v.begin(), v.end(), compare_distance);
@@ -90,11 +82,9 @@ std::vector<cv::Point2d> nearest_points(cv::Point2d const &vec_dir,
   return n_pts;
 }
 
-std::vector<PointDist>
-distance_points_ref(std::vector<cv::Point2d> const &points,
-                    cv::Point2d const &ref) {
+std::vector<PointDist> distance_points_ref(std::vector<cv::Point2d> const& points, cv::Point2d const& ref) {
   std::vector<PointDist> v;
-  for (auto &p : points) {
+  for (auto& p : points) {
     v.push_back({p, cv::norm(p - ref)});
   }
   return v;
@@ -102,22 +92,17 @@ distance_points_ref(std::vector<cv::Point2d> const &points,
 
 namespace fifi {
 
-cv::Point2d centroid(std::vector<cv::Point2d> const &points) {
-  return std::accumulate(points.begin(), points.end(), cv::Point2d(0.0, 0.0)) /
-         static_cast<double>(points.size());
+cv::Point2d centroid(std::vector<cv::Point2d> const& points) {
+  return std::accumulate(points.begin(), points.end(), cv::Point2d(0.0, 0.0)) / static_cast<double>(points.size());
 }
 
-} // ::fifi
+}  // ::fifi
 
-bool validate_pattern(std::vector<cv::Point2d> &points, cv::Point2d &reference,
-                      int const &m, int const &n) {
-
-  int q = static_cast<int>((0.75 * m * n));
+bool validate_pattern(std::vector<cv::Point2d>& points, cv::Point2d& reference, int const& m, int const& n) {
+  int q = static_cast<int>((0.4 * m * n));
   std::vector<cv::Point2d> nearest_pts;
-  std::vector<PointDist> pts_dist, pts_dists_aux, pts_dists_vec_centroid,
-      pts_dists_diag;
-  cv::Point2d vec_centroid, vec_diag_1, vec_diag_2, vert_1, vert_2, vec_1,
-      vec_2, vec_aux, vec_sup, vec_inf;
+  std::vector<PointDist> pts_dist, pts_dists_aux, pts_dists_vec_centroid, pts_dists_diag;
+  cv::Point2d vec_centroid, vec_diag_1, vec_diag_2, vert_1, vert_2, vec_1, vec_2, vec_aux, vec_sup, vec_inf;
 
   int min_size = std::min(m, n);
   int max_size = std::max(m, n);
@@ -128,7 +113,7 @@ bool validate_pattern(std::vector<cv::Point2d> &points, cv::Point2d &reference,
   // remove a referência do vetor de pontos
   erase_point(points, reference);
   // calcula as distâncias dos pontos à referência
-  for (auto &p : points) {
+  for (auto& p : points) {
     pts_dist.push_back({p, cv::norm(p - reference)});
   }
   // ordena de acordo com a distância
@@ -138,10 +123,8 @@ bool validate_pattern(std::vector<cv::Point2d> &points, cv::Point2d &reference,
   vec_centroid = centroid - reference;
   // calcula vetor de distâncias dos pontos à reta suporte
   // do vetor vec_centroid, em seguida ordena o vetor por distancia
-  pts_dists_vec_centroid =
-      distance_to_straight(vec_centroid, reference, points);
-  std::sort(pts_dists_vec_centroid.begin(), pts_dists_vec_centroid.end(),
-            compare_distance);
+  pts_dists_vec_centroid = distance_to_straight(vec_centroid, reference, points);
+  std::sort(pts_dists_vec_centroid.begin(), pts_dists_vec_centroid.end(), compare_distance);
   // verifica entre os (m+n) pontos mais proximos da reta suporte
   // do vetor vec_centroid, qual é o mais distante da referência
   // para definir qual é o último ponto do padrão e o vetor diagonal 1
@@ -163,15 +146,12 @@ bool validate_pattern(std::vector<cv::Point2d> &points, cv::Point2d &reference,
   vert_1 = pts_dists_diag.back().point;
   //  define vetor que aponta na outra diagonal a partir do
   // ponto médio de ref e o ponto mais distante
-  vec_diag_2 =
-      vert_1 - (reference + cv::Point2d(vec_diag_1.x / 2, vec_diag_1.y / 2));
+  vec_diag_2 = vert_1 - (reference + cv::Point2d(vec_diag_1.x / 2, vec_diag_1.y / 2));
   //  com o vetor diagonal, calcula-se as distâncias dos pontos
   // que restaram até a reta suporte do vetor, em seguida ordena o vetor por
   // distancia
   pts_dists_vec_centroid = distance_to_straight(vec_diag_2, vert_1, points);
-  std::sort(pts_dists_vec_centroid.begin(), pts_dists_vec_centroid.end(),
-            compare_distance);
-
+  std::sort(pts_dists_vec_centroid.begin(), pts_dists_vec_centroid.end(), compare_distance);
   //  verifica entre os (m + n) pontos mais proximos da reta suporte do
   //  vetor vec_centroid, qual é o mais distante da referência para
   //  definir qual é o outro vértice do padrão
@@ -183,19 +163,17 @@ bool validate_pattern(std::vector<cv::Point2d> &points, cv::Point2d &reference,
       vert_2 = pts_dists_vec_centroid[i].point;
     }
   }
-  //  define vetores que apontam nas direções laterais do padrão
   vec_1 = vert_1 - reference;
   vec_2 = vert_2 - reference;
+
   //  avalia qual o vetor superior
-  if (((vec_diag_1.x > 0) && (vec_diag_1.cross(vec_1) < 0)) ||
-      ((vec_diag_1.x < 0) && (vec_diag_1.cross(vec_1) > 0))) {
+  if (((vec_diag_1.x < 0) && (vec_diag_1.cross(vec_1) < 0)) || ((vec_diag_1.x > 0) && (vec_diag_1.cross(vec_1) < 0))) {
     vec_sup = vec_1;
     vec_inf = vec_2;
   } else {
     vec_sup = vec_2;
     vec_inf = vec_1;
   }
-
   //  coleta os pontos mais próximos da reta do vetor superior
   nearest_pts = nearest_points(vec_sup, reference, points, min_size - 1);
   pts_dists_aux = distance_points_ref(nearest_pts, reference);
@@ -241,8 +219,7 @@ bool validate_pattern(std::vector<cv::Point2d> &points, cv::Point2d &reference,
   double cur_norm;
   for (int i = 0; i < max_size; i++) {
     for (int j = 1; j < min_size; j++) {
-      cur_norm =
-          cv::norm(pattern[j + i * min_size] - pattern[j + i * min_size - 1]);
+      cur_norm = cv::norm(pattern[j + i * min_size] - pattern[j + i * min_size - 1]);
       mean_x = mean_x + cur_norm;
       sum_sqr_x = sum_sqr_x + cur_norm * cur_norm;
 
@@ -253,8 +230,7 @@ bool validate_pattern(std::vector<cv::Point2d> &points, cv::Point2d &reference,
   }
   for (int i = 0; i < min_size; i++) {
     for (int j = 1; j < max_size; j++) {
-      cur_norm =
-          cv::norm(pattern[i + j * min_size] - pattern[i + (j - 1) * min_size]);
+      cur_norm = cv::norm(pattern[i + j * min_size] - pattern[i + (j - 1) * min_size]);
       mean_y = mean_y + cur_norm;
       sum_sqr_y = sum_sqr_y + cur_norm * cur_norm;
 
@@ -267,12 +243,8 @@ bool validate_pattern(std::vector<cv::Point2d> &points, cv::Point2d &reference,
   mean_x = mean_x / ((min_size - 1) * max_size);
   mean_y = mean_y / ((max_size - 1) * min_size);
 
-  s_x_norm =
-      std::sqrt(sum_sqr_x / ((min_size - 1) * max_size) - (mean_x * mean_x)) /
-      min_x;
-  s_y_norm =
-      std::sqrt(sum_sqr_y / ((max_size - 1) * min_size) - (mean_y * mean_y)) /
-      min_y;
+  s_x_norm = std::sqrt(sum_sqr_x / ((min_size - 1) * max_size) - (mean_x * mean_x)) / min_x;
+  s_y_norm = std::sqrt(sum_sqr_y / ((max_size - 1) * min_size) - (mean_y * mean_y)) / min_y;
 
   if ((s_x_norm > 0.1) && (s_y_norm > 0.1)) {
     points.clear();
@@ -283,16 +255,13 @@ bool validate_pattern(std::vector<cv::Point2d> &points, cv::Point2d &reference,
   }
 }
 
-cv::Point2d get_reference(std::vector<Contour> const &contours) {
+cv::Point2d get_reference(std::vector<Contour> const& contours) {
   return (std::max_element(contours.begin(), contours.end(),
-                           [](Contour const &a, Contour const &b) {
-                             return a.area < b.area;
-                           }))->center;
+                           [](Contour const& a, Contour const& b) { return a.area < b.area; }))
+      ->center;
 }
 
-std::vector<cv::Point2d> find_pattern(cv::Mat image, int const &m,
-                                      int const &n) {
-  //auto t0 = std::chrono::system_clock::now();
+std::vector<cv::Point2d> find_pattern(cv::Mat image, int const& m, int const& n) {
   const double AREA_MIN = 20;
   const double AREA_MAX = 500;
   const double AREA_RATIO_THR = 0.93;
@@ -312,11 +281,9 @@ std::vector<cv::Point2d> find_pattern(cv::Mat image, int const &m,
   }
   cv::blur(image, imblur, cv::Size(3, 3));
   cv::threshold(imblur, imbin, BIN_THR, 255, cv::THRESH_BINARY);
-  cv::dilate(imbin, imbin,
-             cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3)));
+  cv::dilate(imbin, imbin, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3)));
 
-  cv::findContours(imbin, initial_contours, CV_RETR_EXTERNAL,
-                   CV_CHAIN_APPROX_NONE, cv::Point(0, 0));
+  cv::findContours(imbin, initial_contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE, cv::Point(0, 0));
 
   double A = 0;
   double A_x = 0;
@@ -324,11 +291,10 @@ std::vector<cv::Point2d> find_pattern(cv::Mat image, int const &m,
   double a, b, f, area_p, area_d, area_ratio;
   cv::RotatedRect fit_e;
 
-  for (auto &contour : initial_contours) {
+  for (auto& contour : initial_contours) {
     double contour_area = contourArea(contour);
-    if (!((contour_area < AREA_MIN) || (contour_area > AREA_MAX) ||
-          (contour.size() < 5) || (isContourConvex(contour)))) {
-
+    if (!((contour_area < AREA_MIN) || (contour_area > AREA_MAX) || (contour.size() < 5) ||
+          (isContourConvex(contour)))) {
       fit_e = fitEllipse(contour);
       if (fit_e.size.height > fit_e.size.width) {
         a = fit_e.size.height / 2;
@@ -355,21 +321,15 @@ std::vector<cv::Point2d> find_pattern(cv::Mat image, int const &m,
   centroid.x = A_x / A;
   centroid.y = A_y / A;
 
- if (static_cast<int>(contours.size()) >= n_circles) {
-
-    for (auto &c : contours) {
+  if (static_cast<int>(contours.size()) >= n_circles) {
+    for (auto& c : contours) {
       c.distance = cv::norm(c.center - centroid);
     }
 
     std::sort(contours.begin(), contours.end(),
-              [](Contour const &a, Contour const &b) {
-                return a.distance < b.distance;
-              });
+              [](Contour const& a, Contour const& b) { return a.distance < b.distance; });
 
-    // auto t1 = std::chrono::system_clock::now();
-
-    int N = std::min(static_cast<int>(n_circles * 1.25),
-                     static_cast<int>(contours.size()));
+    int N = std::min(static_cast<int>(n_circles * 1.25), static_cast<int>(contours.size()));
     int K = n_circles;
 
     for (int i = 0; i < N; ++i) {
@@ -390,40 +350,12 @@ std::vector<cv::Point2d> find_pattern(cv::Mat image, int const &m,
       }
 
       points.clear();
-      for (auto &cc : cur_contours) {
+      for (auto& cc : cur_contours) {
         points.push_back(cc.center);
       }
       reference = get_reference(cur_contours);
-
       valid = validate_pattern(points, reference, m, n);
     } while (std::prev_permutation(bitmask.begin(), bitmask.end()) && !valid);
-
-    /*
-    auto t2 = std::chrono::system_clock::now();
-
-    std::cout
-        << "find_time: "
-        << std::chrono::duration_cast<std::chrono::microseconds>(t1 -
-  t0).count()
-        << " us\n";
-
-    std::cout
-        << "validate_time: "
-        << std::chrono::duration_cast<std::chrono::microseconds>(t2 -
-  t1).count()
-        << " us\n";
-
-    cv::Mat impattern;
-    cv::cvtColor(image, impattern, CV_GRAY2BGR);
-    for (auto &p : points) {
-      cv::circle(impattern, p, 3, cv::Scalar(0, 255, 0), 3);
-    }
-    cv::circle(impattern, points.front(), 3, cv::Scalar(0, 0, 255), 3);
-    cv::imshow("output", impattern);
-    cv::waitKey(0);
-
-  std::cout << points.empty() << std::endl;
-    */
   } else {
     points.clear();
   }
@@ -431,18 +363,19 @@ std::vector<cv::Point2d> find_pattern(cv::Mat image, int const &m,
 }
 
 Pattern find_pattern(CompressedImage image) {
-    cv::Mat frame = cv::imdecode(image.data, CV_LOAD_IMAGE_COLOR);
-    auto vec_points = find_pattern(frame, 3, 4);
-    if (vec_points.empty()) {
-        return {false};
-    } else {
-        Pattern pattern;
-        for (auto& p : vec_points) {
-            pattern.points.push_back({p.x, p.y});
-        }
-        pattern.found = true;
-        return pattern;
+  cv::Mat frame = cv::imdecode(image.data, CV_LOAD_IMAGE_COLOR);
+  auto vec_points = find_pattern(frame, 3, 4);
+  Pattern pattern;
+
+  if (vec_points.empty()) {
+    pattern.found = false;
+  } else {
+    for (auto& p : vec_points) {
+      pattern.points.push_back({p.x, p.y});
     }
+    pattern.found = true;
+  }
+  return pattern;
 }
 
-#endif // __FIND_PATTERN_HPP__
+#endif  // __FIND_PATTERN_HPP__

@@ -26,3 +26,6 @@ ts_viewer/ts_viewer: ts_viewer/ts_viewer.cpp
 	
 find_pattern/find_pattern: find_pattern/find_pattern.cpp find_pattern/find_pattern.hpp
 	$(COMPILER) $^ -o $@ $(FLAGS) $(SO_DEPS)
+
+pattern_viewer/pattern_viewer: pattern_viewer/pattern_viewer.cpp
+	$(COMPILER) $^ -o $@ $(FLAGS) $(SO_DEPS)

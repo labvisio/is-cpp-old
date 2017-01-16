@@ -6,7 +6,7 @@ namespace po = boost::program_options;
 
 int main(int argc, char* argv[]) {
   std::string uri;
-  std::string name {"is"};
+  std::string name {"pattern"};
 
   po::options_description description("Allowed options");
   auto&& options = description.add_options();
@@ -26,10 +26,10 @@ int main(int argc, char* argv[]) {
   
    auto thread = is::advertise(uri, name, {
       {
-        "find_pattern",
+        "find",
         [&](is::Request request) -> is::Reply {
           auto image = is::msgpack<is::msg::camera::CompressedImage>(request);
-          return is::msgpack(find_pattern(image));
+          return is::msgpack<Pattern>(find_pattern(image));
         }
       }
    });
