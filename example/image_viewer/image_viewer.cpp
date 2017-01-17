@@ -1,9 +1,9 @@
 #include <boost/program_options.hpp>
 #include <iostream>
+#include <is/drivers/webcam.hpp>
+#include <is/gateways/camera.hpp>
+#include <is/is.hpp>
 #include <opencv2/highgui.hpp>
-#include "drivers/webcam.hpp"
-#include "gateways/camera.hpp"
-#include "is.hpp"
 
 using namespace is::msg::camera;
 namespace po = boost::program_options;
@@ -43,11 +43,10 @@ int main(int argc, char* argv[]) {
   auto client = is::make_client(is);
   client.request(entity + ".set_fps", is::msgpack(fps));
   client.request(entity + ".set_resolution", is::msgpack(resolution));
-  
+
   if (imtype_str == "RGB") {
     client.request(entity + ".set_image_type", is::msgpack(ImageType::RGB));
-  }
-  else if (imtype_str == "GRAY") {
+  } else if (imtype_str == "GRAY") {
     client.request(entity + ".set_image_type", is::msgpack(ImageType::GRAY));
   }
 

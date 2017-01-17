@@ -1,7 +1,7 @@
-#include "drivers/webcam.hpp"
 #include <boost/program_options.hpp>
 #include <iostream>
-#include "gateways/camera.hpp"
+#include <is/drivers/webcam.hpp>
+#include <is/gateways/camera.hpp>
 
 namespace po = boost::program_options;
 
