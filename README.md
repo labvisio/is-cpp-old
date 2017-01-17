@@ -3,17 +3,16 @@ is
 
 Easy to use IoT messaging middleware C++ implementation. 
 
-Dependencies
------------------
-- [SimpleAmqpClient](https://github.com/alanxz/SimpleAmqpClient)
-- [msgpack-c](https://github.com/msgpack/msgpack-c/)
-- [spdlog](https://github.com/gabime/spdlog)
-- [opencv](https://github.com/opencv/opencv)
-
 Installing Dependencies
 -----------------
 On linux run the **install** script to install all the dependencies. 
 **(!Tested only on Ubuntu 14.04 and 16.04!)**.
+
+```shell
+cd scripts
+chmod 755 install
+./install
+```
 
 Using the library
 -----------------
@@ -163,7 +162,7 @@ int main(int argc, char* argv[]) {
 
   if (reply == nullptr) {
     /* If the reply is a nullptr than we did'nt receive anything... */
-    is::log->error("Request timeout!");
+    is::logger()->error("Request timeout!");
   } 
   else if (reply->Message()->CorrelationId() != req_id) {
     /* 
@@ -171,11 +170,11 @@ int main(int argc, char* argv[]) {
       reply. Since we only sent one request out this condition should 
       never happen.
     */
-    is::log->error("Invalid reply");
+    is::logger()->error("Invalid reply");
   } 
   else {
     /* "Reply: 1" */
-    is::log->info("Reply: {}", is::msgpack<int>(reply));
+    is::logger()->info("Reply: {}", is::msgpack<int>(reply));
   }
 
 }
