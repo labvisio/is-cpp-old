@@ -17,12 +17,17 @@ struct service_t {
 };
 
 class ServiceProvider {
-  std::string name;
+  const std::string name;
   Channel::ptr_t channel;
+  const std::string exchange;
+
   std::unordered_map<std::string, service_handle_t> map;
 
  public:
-  ServiceProvider(std::string const& name, Channel::ptr_t const& channel) : name(name), channel(channel) {
+  ServiceProvider(std::string const& name, Channel::ptr_t const& channel, std::string const& exchange = "services")
+      : name(name), channel(channel), exchange(exchange) {
+    // passive durable auto_delete 
+    channel->DeclareExchange(exchange, Channel::EXCHANGE_TYPE_TOPIC, false, false, false);
     // passive, durable, exclusive, auto_delete
     Table arguments{{TableKey("x-expires"), TableValue(30000)}};
     channel->DeclareQueue(name, false, false, false, false, arguments);
@@ -30,7 +35,7 @@ class ServiceProvider {
 
   void expose(std::string const& binding, service_handle_t service) {
     logger()->info("({}) Exposing new service on topic \"{}\"", name, binding);
-    channel->BindQueue(name, "amq.topic", binding);
+    channel->BindQueue(name, exchange, binding);
     map.emplace(binding, service);
   }
 
@@ -64,10 +69,10 @@ class ServiceProvider {
         auto&& route = request->Message()->ReplyTo();
         auto&& pos = route.find_first_of(';');
         if (pos == std::string::npos || pos + 1 > route.size()) {
-          channel->BasicPublish("amq.topic", route, response);
+          channel->BasicPublish(exchange, route, response);
         } else {
           response->ReplyTo(route.substr(pos + 1));
-          channel->BasicPublish("amq.topic", route.substr(0, pos), response);
+          channel->BasicPublish(exchange, route.substr(0, pos), response);
         }
       } else {
         logger()->warn("({}) Invalid service requested \"{}\"", name, request->RoutingKey());

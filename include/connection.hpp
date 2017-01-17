@@ -13,15 +13,19 @@ using namespace AmqpClient;
 
 struct Connection {
   Channel::ptr_t channel;
+  const std::string exchange;
 
-  Connection(Channel::ptr_t channel) : channel(channel) {}
+  Connection(Channel::ptr_t channel, std::string const& exchange = "data") : channel(channel), exchange(exchange) {
+    // passive durable auto_delete 
+    channel->DeclareExchange(exchange, Channel::EXCHANGE_TYPE_TOPIC, false, false, false);
+  }
 
   void publish(std::string const& topic, BasicMessage::ptr_t message) {
     bool mandatory{false};
     if (!message->TimestampIsSet()) {
       set_timestamp(message);
     }
-    channel->BasicPublish("amq.topic", topic, message, mandatory);
+    channel->BasicPublish(exchange, topic, message, mandatory);
   }
 
   std::string subscribe(std::vector<std::string> const& topics) {
@@ -30,7 +34,7 @@ struct Connection {
     auto queue = channel->DeclareQueue("", false, false, true, true, arguments);
 
     for (auto& topic : topics) {
-      channel->BindQueue(queue, "amq.topic", topic);
+      channel->BindQueue(queue, exchange, topic);
     }
 
     // no_local, no_ack, exclusive
