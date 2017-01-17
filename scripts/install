@@ -9,7 +9,6 @@ if [[ $EUID != 0 ]]; then
 fi
 
 apt-get update
-apt-get upgrade -y
 
 printf '%-50s' ' [x] Installing dependencies'   
 declare -a packages=( \
@@ -25,8 +24,9 @@ declare -a packages=( \
   "liblapack-dev"     \
   "liblapacke-dev"    \
   "libopenblas-dev"   \
-  "libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev" \
-  "libarmadillo-dev"  \
+  "libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev" \ # opencv
+  "libarmadillo-dev"  \ 
+	"libvorbis-dev libudev-dev libjpeg-dev libopenal-dev" \ #sfml
 )
 
 for package in "${packages[@]}"
@@ -181,5 +181,10 @@ if [ ! -d "/usr/local/include/spdlog" ]; then
 else
 	printf 'found!\n'   
 fi
+
+printf '[x] Copying library files ...\n'   
+
+sudo mkdir /usr/local/include/is
+sudo cp -rf ../include/* /usr/local/include/is
 
 printf '[x] Done...\n'   
