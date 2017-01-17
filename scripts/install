@@ -184,7 +184,9 @@ fi
 
 printf '[x] Copying library files ...\n'   
 
-sudo mkdir /usr/local/include/is
+if [ ! -d "/usr/local/include/is" ]; then
+	sudo mkdir /usr/local/include/is
+fi
 sudo cp -rf ../include/* /usr/local/include/is
 
 printf '[x] Done...\n'   
