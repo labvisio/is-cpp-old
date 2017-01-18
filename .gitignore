@@ -3,3 +3,5 @@
 example/image_viewer/image_viewer
 example/ptgrey/ptgrey
 example/webcam/webcam
+example/find_pattern/find_pattern
+example/pattern_viewer/pattern_viewer
