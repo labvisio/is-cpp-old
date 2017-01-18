@@ -1,6 +1,6 @@
 #include "find_pattern.hpp"
 #include <boost/program_options.hpp>
-#include "../../include/is.hpp"
+#include <is/is.hpp>
 
 namespace po = boost::program_options;
 

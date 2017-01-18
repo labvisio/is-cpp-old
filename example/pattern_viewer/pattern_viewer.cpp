@@ -7,10 +7,10 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-#include "../../include/gateways/camera.hpp"
-#include "../../include/is.hpp"
-#include "../../include/msgs/common.hpp"
-#include "../../include/msgs/camera.hpp"
+#include <is/gateways/camera.hpp>
+#include <is/is.hpp>
+#include <is/msgs/common.hpp>
+#include <is/msgs/camera.hpp>
 
 using namespace std::chrono_literals;
 using namespace is::msg::camera;

@@ -12,8 +12,8 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <vector>
 
-#include "../../include/msgs/camera.hpp"
-#include "../../include/msgs/common.hpp"
+#include <is/msgs/camera.hpp>
+#include <is/msgs/common.hpp>
 
 using namespace is::msg::camera;
 using namespace is::msg::common;
@@ -55,13 +55,13 @@ void draw_contour(std::vector<std::vector<cv::Point>> const& contours, cv::Mat& 
   }
 }
 
-auto compare_distance = [](PointDist const& x, PointDist const& y) { return x.distance < y.distance; };
+bool compare_distance(PointDist const& x, PointDist const& y) { return x.distance < y.distance; };
 
 void erase_point(std::vector<cv::Point2d>& v, cv::Point2d const& pt) {
   v.erase(std::remove(v.begin(), v.end(), pt), v.end());
 }
 
-std::vector<PointDist> distance_to_straight(cv::Point2d const& vec_dir, cv::Point2d const& ref,
+std::vector<PointDist> distance_to_line(cv::Point2d const& vec_dir, cv::Point2d const& ref,
                                             std::vector<cv::Point2d> const& points) {
   std::vector<PointDist> v;
   PointDist v_aux;
@@ -74,7 +74,7 @@ std::vector<PointDist> distance_to_straight(cv::Point2d const& vec_dir, cv::Poin
 std::vector<cv::Point2d> nearest_points(cv::Point2d const& vec_dir, cv::Point2d const& ref,
                                         std::vector<cv::Point2d> const& points, int const& qnt_nearest) {
   std::vector<cv::Point2d> n_pts;
-  std::vector<PointDist> v = distance_to_straight(vec_dir, ref, points);
+  std::vector<PointDist> v = distance_to_line(vec_dir, ref, points);
   std::sort(v.begin(), v.end(), compare_distance);
   for (int i = 0; i < std::min((int)v.size(), qnt_nearest); i++) {
     n_pts.push_back(v[i].point);
@@ -118,7 +118,7 @@ bool validate_pattern(std::vector<cv::Point2d>& points, cv::Point2d& reference, 
   std::sort(pts_dist.begin(), pts_dist.end(), compare_distance);
   vec_centroid = centroid - reference;
 
-  pts_dists_vec_centroid = distance_to_straight(vec_centroid, reference, points);
+  pts_dists_vec_centroid = distance_to_line(vec_centroid, reference, points);
   std::sort(pts_dists_vec_centroid.begin(), pts_dists_vec_centroid.end(), compare_distance);
   // verifica entre os (m+n) pontos mais proximos da reta suporte
   // do vetor vec_centroid, qual é o mais distante da referência
@@ -135,7 +135,7 @@ bool validate_pattern(std::vector<cv::Point2d>& points, cv::Point2d& reference, 
   //  com o vetor diagonal, calcula-se as distâncias dos pontos
   //    que restaram até a reta suporte do vetor,
   //    em seguida ordena o vetor por distancia
-  pts_dists_diag = distance_to_straight(vec_diag_1, reference, points);
+  pts_dists_diag = distance_to_line(vec_diag_1, reference, points);
   std::sort(pts_dists_diag.begin(), pts_dists_diag.end(), compare_distance);
   //  O ponto mais distante é definido como um dos vértices
   vert_1 = pts_dists_diag.back().point;
@@ -145,7 +145,7 @@ bool validate_pattern(std::vector<cv::Point2d>& points, cv::Point2d& reference, 
   //  com o vetor diagonal, calcula-se as distâncias dos pontos
   // que restaram até a reta suporte do vetor, em seguida ordena o vetor por
   // distancia
-  pts_dists_vec_centroid = distance_to_straight(vec_diag_2, vert_1, points);
+  pts_dists_vec_centroid = distance_to_line(vec_diag_2, vert_1, points);
   std::sort(pts_dists_vec_centroid.begin(), pts_dists_vec_centroid.end(), compare_distance);
   //  verifica entre os (m + n) pontos mais proximos da reta suporte do
   //  vetor vec_centroid, qual é o mais distante da referência para
