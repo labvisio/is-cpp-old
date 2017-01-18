@@ -57,6 +57,19 @@ struct EntityList {
   MSGPACK_DEFINE_ARRAY(list);
 };
 
+struct Point2d {
+  double x, y;
+
+  MSGPACK_DEFINE_ARRAY(x, y);
+};
+
+struct Pattern {
+  std::vector<Point2d> points;
+  bool found;
+
+  MSGPACK_DEFINE_ARRAY(points, found);
+};
+
 }  // ::common
 }  // ::msg
 }  // ::is
@@ -64,4 +77,4 @@ struct EntityList {
 // Enum packing must be done on global namespace
 MSGPACK_ADD_ENUM(is::msg::common::Status);
 
-#endif // __IS_MSG_COMMON_HPP__
+#endif  // __IS_MSG_COMMON_HPP__

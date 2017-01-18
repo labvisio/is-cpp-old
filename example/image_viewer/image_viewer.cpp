@@ -41,6 +41,7 @@ int main(int argc, char* argv[]) {
   record = vm.count("output");
 
   auto is = is::connect(uri);
+
   auto client = is::make_client(is);
   
   sample_rate = {fps};

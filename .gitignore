@@ -5,3 +5,5 @@ example/ptgrey/ptgrey
 example/webcam/webcam
 example/sync/sync
 example/sync_request/sync_request
+example/find_pattern/find_pattern
+example/pattern_viewer/pattern_viewer
