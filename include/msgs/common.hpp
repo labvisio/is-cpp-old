@@ -26,6 +26,37 @@ struct TimeStamp {
   MSGPACK_DEFINE_ARRAY(time_point);
 };
 
+struct SamplingRate {
+  double rate;     // [Hz]
+  int64_t period;  // [ms]
+
+  SamplingRate() {}
+
+  SamplingRate(double r) {
+    rate = r;
+    period = 0;
+  }
+
+  SamplingRate(int64_t p) {
+    period = p;
+    rate = 0.0;
+  }
+
+  MSGPACK_DEFINE_ARRAY(rate, period);
+};
+
+struct EntityList {
+  std::vector<std::string> list;
+
+  EntityList() {}
+
+  EntityList(std::vector<std::string> l) {
+    list = l;
+  }
+
+  MSGPACK_DEFINE_ARRAY(list);
+};
+
 }  // ::common
 }  // ::msg
 }  // ::is
@@ -33,4 +64,4 @@ struct TimeStamp {
 // Enum packing must be done on global namespace
 MSGPACK_ADD_ENUM(is::msg::common::Status);
 
-#endif  // __IS_MSG_COMMON_HPP__
+#endif // __IS_MSG_COMMON_HPP__

@@ -51,6 +51,7 @@ struct PtGrey {
     set_packet_delay(6000);
     set_packet_size(1400);
     set_image_type(ImageType::RGB);
+    set_sample_rate({1.0});
     camera.StartCapture();
   }
 
@@ -61,7 +62,7 @@ struct PtGrey {
     }
   }
 
-  void set_fps(double fps) {
+  void set_sample_rate(SamplingRate sample_rate) {
     std::lock_guard<std::mutex> lock(mutex);
 
     Property property(FRAME_RATE);
@@ -70,17 +71,24 @@ struct PtGrey {
     PropertyInfo info(FRAME_RATE);
     error = camera.GetPropertyInfo(&info);
 
-    property.absValue = std::max(info.absMin, std::min(static_cast<float>(fps), info.absMax));
+    float fps;
+    if (sample_rate.rate == 0.0 && sample_rate.period > 0) {
+      fps = static_cast<float>(1000 / sample_rate.period);
+    } else if (sample_rate.rate > 0.0 && sample_rate.period == 0) {
+      fps = static_cast<float>(sample_rate.rate);
+    }
+
+    property.absValue = std::max(info.absMin, std::min(fps, info.absMax));
     property.autoManualMode = false;
 
     error = camera.SetProperty(&property);
   }
 
-  double get_fps() {
+  SamplingRate get_sample_rate() {
     std::lock_guard<std::mutex> lock(mutex);
     Property property(FRAME_RATE);
     error = camera.GetProperty(&property);
-    return static_cast<double>(property.absValue);
+    return {static_cast<double>(property.absValue)};
   }
 
   double get_max_fps() {
@@ -120,28 +128,49 @@ struct PtGrey {
   void set_image_type(ImageType image_type) {
     std::lock_guard<std::mutex> lock(mutex);
     this->image_type = image_type;
+    GigEImageSettings settings;
+    camera.StopCapture();
+    error = camera.GetGigEImageSettings(&settings);
     switch (image_type) {
       case ImageType::GRAY:
-        pixel_format = FlyCapture2::PIXEL_FORMAT_MONO8;
+        pixel_format = PIXEL_FORMAT_MONO8;
         cv_type = CV_8UC1;
+        settings.pixelFormat = PIXEL_FORMAT_MONO8;
         break;
       default:
-        pixel_format = FlyCapture2::PIXEL_FORMAT_BGR;
+        pixel_format = PIXEL_FORMAT_BGR;
         cv_type = CV_8UC3;
+        settings.pixelFormat = PIXEL_FORMAT_RAW8;
+        // settings.pixelFormat = PIXEL_FORMAT_RGB8;
         break;
     }
+    error = camera.SetGigEImageSettings(&settings);
+    camera.StartCapture();
   }
 
   ImageType get_image_type() { return image_type; }
 
-  void set_delay(Delay) {}
+  void set_delay(Delay delay) {
+    std::lock_guard<std::mutex> lock(mutex);
+
+    Property property(TRIGGER_DELAY);
+    error = camera.GetProperty(&property);
+
+    PropertyInfo info(TRIGGER_DELAY);
+    error = camera.GetPropertyInfo(&info);
+
+    property.absValue = std::max(info.absMin, std::min(static_cast<float>(delay.milliseconds) / 1000.0f, info.absMax));
+    property.onOff = true;
+
+    error = camera.SetProperty(&property);
+  }
 
   cv::Mat get_frame() {
     std::lock_guard<std::mutex> lock(mutex);
 
     Image buffer, image;
     error = camera.RetrieveBuffer(&buffer);
-    last_timestamp = TimeStamp();   
+    last_timestamp = TimeStamp();
     buffer.Convert(pixel_format, &image);
     cv::Mat frame(image.GetRows(), image.GetCols(), cv_type, image.GetData(), image.GetDataSize() / image.GetRows());
     frame = frame.clone();
@@ -164,9 +193,9 @@ struct PtGrey {
     error = camera.SetGigEProperty(&property);
   }
 
-  void set_packet_delay(unsigned int delay) { set_property(delay, FlyCapture2::PACKET_DELAY); }
+  void set_packet_delay(unsigned int delay) { set_property(delay, PACKET_DELAY); }
 
-  void set_packet_size(unsigned int size) { set_property(size, FlyCapture2::PACKET_SIZE); }
+  void set_packet_size(unsigned int size) { set_property(size, PACKET_SIZE); }
 
   IPAddress make_ip_address(std::string const& ip) {
     std::vector<std::string> fields;

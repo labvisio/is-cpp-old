@@ -3,3 +3,5 @@
 example/image_viewer/image_viewer
 example/ptgrey/ptgrey
 example/webcam/webcam
+example/sync/sync
+example/sync_request/sync_request
