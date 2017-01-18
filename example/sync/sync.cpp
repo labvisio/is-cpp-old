@@ -1,4 +1,4 @@
-#include "sync_service_utils.hpp"
+#include "sync.hpp"
 #include <boost/program_options.hpp>
 
 namespace po = boost::program_options;
