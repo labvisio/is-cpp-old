@@ -5,3 +5,5 @@ example/webcam
 example/robot_teleoperation/robot_teleoperation
 example/pioneer/pioneer
 example/odometry_viewer/odometry_viewer
+example/final_position_controller/final_position_controller
+example/control_robot/control_robot
