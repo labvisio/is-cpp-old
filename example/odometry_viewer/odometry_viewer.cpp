@@ -2,8 +2,8 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/program_options.hpp>
 #include <iostream>
-#include "gateways/robot.hpp"
-#include "is.hpp"
+#include <is/gateways/robot.hpp>
+#include <is/is.hpp>
 
 namespace po = boost::program_options;
 

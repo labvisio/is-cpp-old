@@ -1,9 +1,9 @@
 #ifndef __IS_GW_ROBOT_HPP__
 #define __IS_GW_ROBOT_HPP__
 
-#include "../is.hpp"
-#include "../msgs/common.hpp"
-#include "../msgs/robot.hpp"
+#include <is/is.hpp>
+#include <is/msgs/common.hpp>
+#include <is/msgs/robot.hpp>
 
 namespace is {
 namespace gw {
@@ -53,6 +53,7 @@ struct Robot {
     });
     
     while (1) {
+      robot.wait();
       is.publish(name + ".odometry", is::msgpack(robot.get_odometry()));
       is.publish(name + ".timestamp", is::msgpack(robot.get_last_timestamp()));
     }

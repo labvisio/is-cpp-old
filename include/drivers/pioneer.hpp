@@ -1,17 +1,19 @@
 #ifndef __IS_DRIVER_PIONEER_HPP__
 #define __IS_DRIVER_PIONEER_HPP__
 
-#include <atomic>
-#include <boost/lockfree/spsc_queue.hpp>
+#include <is/msgs/common.hpp>
+#include <is/msgs/robot.hpp>
+#include <is/logger.hpp>
+
 #include <chrono>
-#include <iostream>
 #include <memory>
-#include <mutex>
 #include <string>
+
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
 #include <thread>
-#include "../logger.hpp"
-#include "../msgs/common.hpp"
-#include "../msgs/robot.hpp"
+
 #include <Aria/include/Aria.h>
 
 namespace is {
@@ -20,76 +22,52 @@ namespace driver {
 using namespace std::chrono;
 using namespace is::msg::common;
 using namespace is::msg::robot;
-using namespace boost::lockfree;
-
-template <typename T, size_t Size>
-class sync_queue {
- public:
-  sync_queue() { mtx.lock(); }
-
-  bool push(const T& t) {
-    bool ret = queue.push(t);
-    mtx.unlock();
-    return ret;
-  }
-  bool pop(T& t) {
-    mtx.lock();
-    return queue.pop(t);
-  }
-
- private:
-  std::mutex mtx;
-  spsc_queue<T, capacity<Size>> queue;
-};
 
 struct Pioneer {
-  std::mutex mutex;
-  std::thread robot_thread;
   ArRobot robot;
-  ArSerialConnection serial_connection;
-  ArTcpConnection tcp_connection;
-  sync_queue<Odometry, 10> odometry;
-  int64_t period;  // [ms]
-  int64_t delay;   // [ms]
-  std::atomic<bool> apply_delay;
+  ArDeviceConnection* connection;
+
   TimeStamp last_timestamp;
+  std::atomic<int64_t> period_ms;
+  std::atomic<int64_t> delay_ms;
 
-  Pioneer() {}
+  bool ready;
+  std::mutex mutex;
+  std::condition_variable condition;
+  std::thread thread;
+  std::atomic<bool> running;
 
-  Pioneer(std::string serial_port) { connect(serial_port); }
+  Pioneer() : connection(nullptr) {}
+  Pioneer(std::string const& port) { connect(port); }
+  Pioneer(std::string const& hostname, int port) { connect(hostname, port); }
 
-  Pioneer(std::string hostname, int port) { connect(hostname, port); }
+  virtual ~Pioneer() {
+    running = false;
+    thread.join();
+    if (connection != nullptr) {
+      delete connection;
+    }
+  }
 
-  void connect(std::string serial_port) {
-    mutex.lock();
+  void connect(std::string const& port) {
     Aria::init();
-    if (serial_connection.open(serial_port.c_str()) != 0) {
-      throw std::runtime_error("Cannot open port.");
-    }
-    robot.setDeviceConnection(&serial_connection);
-    if (!robot.blockingConnect()) {
-      throw std::runtime_error("Could not connect to robot.");
-    }
-    mutex.unlock();
+    auto serial = new ArSerialConnection;
+    connection = serial;
+    serial->open(port.c_str());
+    robot.setDeviceConnection(serial);
     initialize();
   }
 
-  void connect(std::string hostname, int port) {
-    mutex.lock();
+  void connect(std::string const& hostname, int port) {
     Aria::init();
-    if (tcp_connection.open(hostname.c_str(), port) != 0) {
-      throw std::runtime_error("Cannot open port.");
-    }
-    robot.setDeviceConnection(&tcp_connection);
-    if (!robot.blockingConnect()) {
-      throw std::runtime_error("Could not connect to robot.");
-    }
-    mutex.unlock();
+    auto tcp = new ArTcpConnection;
+    connection = tcp;
+    tcp->open(hostname.c_str(), port);
+    robot.setDeviceConnection(tcp);
     initialize();
   }
 
-  void set_velocities(Velocities vels) {
-    std::lock_guard<std::mutex> lock(mutex);
+  void set_velocities(Velocities const& vels) {
     robot.lock();
     robot.setVel(vels.v);
     robot.setRotVel(vels.w);
@@ -97,93 +75,90 @@ struct Pioneer {
   }
 
   Velocities get_velocities() {
-    std::lock_guard<std::mutex> lock(mutex);
     robot.lock();
-    double linvel = robot.getVel();
-    double rotvel = robot.getRotVel();
+    double linear = robot.getVel();
+    double angular = robot.getRotVel();
     robot.unlock();
-    return {linvel, rotvel};
+    return {linear, angular};
   }
 
   Odometry get_odometry() {
-    Odometry odo;
-    odometry.pop(odo);
-    return odo;
+    robot.lock();
+    ArPose pose = robot.getPose();
+    robot.unlock();
+    Odometry odometry{pose.getX(), pose.getY(), pose.getTh()};
+    return odometry;
   }
 
-  void set_pose(Odometry pose) {
-    std::lock_guard<std::mutex> lock(mutex);
+  void set_pose(Odometry const& pose) {
     robot.lock();
     robot.moveTo(ArPose(pose.x, pose.y, pose.th));
     robot.unlock();
   }
 
-  void set_sample_rate(SamplingRate sample_rate) {
-    std::lock_guard<std::mutex> lock(mutex);
-    if (sample_rate.rate == 0.0 && sample_rate.period > 0) {
-      period = sample_rate.period < 100 ? 100 : sample_rate.period;
-    } else if (sample_rate.rate > 0.0 && sample_rate.period == 0) {
-      int64_t cur_period = static_cast<int64_t>(1000.0 / sample_rate.rate);
-      period = cur_period < 100 ? 100 : cur_period;
+  void set_sample_rate(SamplingRate const& rate) {
+    if (rate.period != 0) {
+      period_ms = std::max<int64_t>(100, rate.period);
+    } else if (rate.rate != 0.0) {
+      period_ms = std::max<int64_t>(100, 1000.0 / rate.rate);
     }
   }
 
   SamplingRate get_sample_rate() {
-    std::lock_guard<std::mutex> lock(mutex);
-    SamplingRate sample_rate;
-    sample_rate.period = period;
-    sample_rate.rate = static_cast<double>(1000 / period);
-    return sample_rate;
+    SamplingRate rate;
+    rate.period = period_ms;
+    rate.rate = static_cast<double>(1000.0 / period_ms);
+    return rate;
   }
 
-  void set_delay(Delay d) {
-    std::lock_guard<std::mutex> lock(mutex);
-    if (d.milliseconds <= period) {
-      delay = d.milliseconds;
-      apply_delay.store(true);
+  void set_delay(Delay const& delay) {
+    if (delay.milliseconds <= period_ms) {
+      delay_ms = delay.milliseconds;
     }
   }
 
-  TimeStamp get_last_timestamp() {
-    std::lock_guard<std::mutex> lock(mutex);
-    return last_timestamp;
+  TimeStamp get_last_timestamp() { return last_timestamp; }
+
+  void wait() {
+    std::unique_lock<std::mutex> lock(mutex);
+    condition.wait(lock, [this] { return ready; });
+    ready = false;
   }
 
  private:
   void initialize() {
-    period = 100;
-    apply_delay.store(false);
-    std::thread t([&]() {
-      mutex.lock();
-      robot.runAsync(true);
-      robot.lock();
-      robot.moveTo(ArPose(0.0, 0.0, 0.0));
-      robot.enableMotors();
-      robot.setVel(0.0);
-      robot.setRotVel(0.0);
-      robot.unlock();
-      ArUtil::sleep(1000);
-      mutex.unlock();
+    if (!robot.blockingConnect()) {
+      throw std::runtime_error("Could not connect to robot.");
+    }
 
-      while (1) {
-        mutex.lock();
-        // Get timestamp
-        last_timestamp = TimeStamp();
+    robot.runAsync(true);
+    robot.lock();
+    robot.moveTo(ArPose(0.0, 0.0, 0.0));
+    robot.enableMotors();
+    robot.setVel(0.0);
+    robot.setRotVel(0.0);
+    robot.unlock();
+
+    period_ms = 100;
+    delay_ms = 0;
+
+    auto loop = [this]() {
+      running = true;
+      while (running) {
         auto now = std::chrono::system_clock::now();
-        // Get odometry
-        Odometry odo = {robot.getX(), robot.getY(), robot.getTh()};
-        mutex.unlock();
-        odometry.push(odo);
-        // Sleep
-        if (!apply_delay.load()) {
-          std::this_thread::sleep_until(now + milliseconds(period));
-        } else {
-          apply_delay.store(false);
-          std::this_thread::sleep_until(now + milliseconds(period + delay));
+        last_timestamp = TimeStamp();
+
+        std::this_thread::sleep_until(now + milliseconds(period_ms + delay_ms));
+        
+        {
+          std::unique_lock<std::mutex> lock(mutex);
+          ready = true;
         }
+        condition.notify_one();
       }
-    });
-    robot_thread = std::move(t);
+    };
+
+    thread = std::thread(loop);
   }
 };
 
