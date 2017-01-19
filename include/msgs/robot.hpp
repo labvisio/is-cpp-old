@@ -23,36 +23,18 @@ struct Velocities {
 };
 
 struct FinalPosition {
-  Odometry current, desired;
+  // one of {
+  Odometry current;
   std::string odometry_source;
-  bool external_source;
-  double kpx, kpy, lx, ly, a;
-
-  FinalPosition() {}
+  // }
+  Odometry desired;
+  double gain_x;
+  double gain_y;
+  double max_vel_x;
+  double max_vel_y;
+  double center_offset;
   
-  FinalPosition(Odometry current, Odometry desired) {
-    this->current = current;
-    this->desired = desired;
-    kpx = 0.2;
-    kpy = 0.2;
-    lx = 80;
-    ly = 80;
-    a = 200.0; // [mm]
-    external_source = false;
-  }
-
-  FinalPosition(std::string odometry_source, Odometry desired) {
-    this->odometry_source = odometry_source;
-    this->desired = desired;
-    kpx = 0.2;
-    kpy = 0.2;
-    lx = 80;
-    ly = 80;
-    a = 200.0; // [mm]
-    external_source = true;
-  }
-
-  MSGPACK_DEFINE_ARRAY(current, desired, odometry_source, external_source, kpx, kpy, lx, ly, a);
+  MSGPACK_DEFINE_ARRAY(current, odometry_source, desired, gain_x, gain_y, max_vel_x, max_vel_y, center_offset);
 };
 
 }  // ::robot

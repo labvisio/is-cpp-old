@@ -1,10 +1,11 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/program_options.hpp>
+#include <cmath>
 #include <iostream>
 #include <is/is.hpp>
-#include "../../include/msgs/robot.hpp"
 #include <is/msgs/common.hpp>
+#include "../../include/msgs/robot.hpp"
 
 namespace po = boost::program_options;
 using namespace is::msg::robot;
@@ -15,7 +16,7 @@ int main(int argc, char* argv[]) {
   std::string entity;
   std::string desired_pose_str;
   int64_t period;
-  Odometry desired {0.0, 0.0, 0.0};
+  Odometry desired{0.0, 0.0, 0.0};
 
   po::options_description description("Allowed options");
   auto&& options = description.add_options();
@@ -50,16 +51,25 @@ int main(int argc, char* argv[]) {
     client.request(entity + ".set_sample_rate", is::msgpack(sample_rate));
   }
 
-  while(client.receive(1s) != nullptr);
+  while (client.receive(1s) != nullptr);
 
   auto odometries = is.subscribe({entity + ".odometry"});
+
+  FinalPosition req_controller;
+  req_controller.desired = desired;
+  req_controller.gain_x = 0.2;
+  req_controller.gain_y = 0.2;
+  req_controller.max_vel_x = 80;
+  req_controller.max_vel_y = 80;
+  req_controller.center_offset = 200.0;
 
   while (1) {
     auto message = is.consume(odometries);
     Odometry current = is::msgpack<Odometry>(message);
-    auto req_id = client.request("controller.final_position", is::msgpack<FinalPosition>({current, desired}));
+    req_controller.current = current;
+    auto req_id = client.request("controller.final_position", is::msgpack<FinalPosition>(req_controller));
     auto reply = client.receive(1s);
-    
+
     if (reply == nullptr) {
       is::logger()->error("Controller request: timeout!");
     } else if (reply->Message()->CorrelationId() != req_id) {
@@ -67,7 +77,11 @@ int main(int argc, char* argv[]) {
     } else {
       req_id = client.request(entity + ".set_velocities", reply->Message());
     }
-    
+
+    Velocities vels = is::msgpack<Velocities>(reply);
+    std::cout << "\r                                    \r"
+              << "(x,y) (" << current.x << ';' << current.y << ") (v;w)(" << vels.v << ';' << vels.w << ')' << std::flush;
+
     reply = client.receive(1s);
     if (reply == nullptr) {
       is::logger()->error("Velocities request: timeout!");
@@ -75,7 +89,11 @@ int main(int argc, char* argv[]) {
       is::logger()->error("Velocities request: Invalid reply");
     }
 
-    std::cout << current.x << '\t' << current.y << '\n';
+    double p = std::sqrt(std::pow(desired.x - current.x, 2.0) + std::pow(desired.y - current.y, 2.0));
+    if (p < 5.0) {
+      client.request(entity + ".set_velocities", is::msgpack<Velocities>({0.0, 0.0}));
+      return 0;
+    }
   }
   return 0;
 }

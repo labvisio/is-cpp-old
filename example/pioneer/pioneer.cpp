@@ -1,7 +1,9 @@
 #include <boost/program_options.hpp>
 #include <iostream>
-#include <is/drivers/pioneer.hpp>
-#include <is/gateways/robot.hpp>
+//#include <is/drivers/pioneer.hpp>
+#include "../../include/drivers/pioneer.hpp"
+//#include <is/gateways/robot.hpp>
+#include "../../include/gateways/robot.hpp"
 
 namespace po = boost::program_options;
 

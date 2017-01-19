@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
         "final_position",
         [&](is::Request request) -> is::Reply {
             FinalPosition req = is::msgpack<FinalPosition>(request);
-            //if (req.external_sorce) {
+            //if () {
             //    // request odometry
             //    
             //}
@@ -50,16 +50,17 @@ int main(int argc, char* argv[]) {
             mat invA(2,2);
             invA.at(0,0) = cos(deg2rad(req.current.th));
             invA.at(0,1) = sin(deg2rad(req.current.th));
-            invA.at(1,0) = -(1.0/req.a)*sin(deg2rad(req.current.th));
-            invA.at(1,1) =  (1.0/req.a)*cos(deg2rad(req.current.th));
+            invA.at(1,0) = -(1.0/req.center_offset)*sin(deg2rad(req.current.th));
+            invA.at(1,1) =  (1.0/req.center_offset)*cos(deg2rad(req.current.th));
 
             mat C(2,1);
-            C.at(0,0) = req.lx*tanh(req.kpx/req.lx)*x_til;
-            C.at(1,0) = req.ly*tanh(req.kpy/req.ly)*y_til;
+            C.at(0,0) = req.max_vel_x*tanh((req.gain_x/req.max_vel_x)*x_til);
+            C.at(1,0) = req.max_vel_y*tanh((req.gain_y/req.max_vel_y)*y_til);
             
             mat vels_vec = invA*C;
 
             Velocities vels {vels_vec.at(0), rad2deg(vels_vec.at(1))};
+            is::logger()->info("(v,w)=({},{})", vels.v, vels.w);
             return is::msgpack(vels);
         }
       }

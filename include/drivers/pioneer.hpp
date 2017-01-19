@@ -2,7 +2,8 @@
 #define __IS_DRIVER_PIONEER_HPP__
 
 #include <is/msgs/common.hpp>
-#include <is/msgs/robot.hpp>
+//#include <is/msgs/robot.hpp>
+#include "../msgs/robot.hpp"
 #include <is/logger.hpp>
 
 #include <chrono>

@@ -3,7 +3,8 @@
 
 #include <is/is.hpp>
 #include <is/msgs/common.hpp>
-#include <is/msgs/robot.hpp>
+//#include <is/msgs/robot.hpp>
+#include "../msgs/robot.hpp"
 
 namespace is {
 namespace gw {
@@ -26,7 +27,7 @@ struct Robot {
       },
       {
         "get_velocities",
-        [&](is::Request request) -> is::Reply {
+        [&](is::Request) -> is::Reply {
           return is::msgpack(robot.get_velocities());
         }
       },
@@ -46,7 +47,7 @@ struct Robot {
       },
       {
         "get_sample_rate",
-        [&](is::Request request) -> is::Reply {
+        [&](is::Request) -> is::Reply {
           return is::msgpack(robot.get_sample_rate());
         }
       }
