@@ -11,3 +11,4 @@ example/pioneer/pioneer
 example/odometry_viewer/odometry_viewer
 example/final_position_controller/final_position_controller
 example/control_robot/control_robot
+example/visual_control/visual_control

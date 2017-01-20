@@ -1,3 +1,6 @@
+#include <armadillo>
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
 #include <boost/program_options.hpp>
 #include <chrono>
 #include <iostream>
@@ -5,6 +8,7 @@
 #include <is/is.hpp>
 #include <is/msgs/camera.hpp>
 #include <is/msgs/common.hpp>
+#include <is/msgs/robot.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
@@ -12,10 +16,36 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
+using namespace arma;
 using namespace std::chrono_literals;
 using namespace is::msg::camera;
+using namespace is::msg::robot;
 using namespace is::msg::common;
 namespace po = boost::program_options;
+
+namespace fifi {
+
+template <class Time>
+ AmqpClient::Envelope::ptr_t wait(is::ServiceClient& client, std::string const& id, Time duration) {
+  auto until = std::chrono::system_clock::now() + duration;
+
+  while (1) {
+    auto block = until - std::chrono::system_clock::now();
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(block).count() < 0.0) {
+      return nullptr;
+    }
+
+    auto reply = client.receive(block);
+    if (reply == nullptr) {
+      is::logger()->warn("Pattern: Empty message.");
+    } else if (reply->Message()->CorrelationId() != id) {
+      is::logger()->warn("Pattern: Invalid correlation id.[{},{}]", id, reply->Message()->CorrelationId());
+    } else {
+      return reply;
+    }
+  }
+}
+}
 
 int main(int argc, char* argv[]) {
   std::string uri;
@@ -63,26 +93,29 @@ int main(int argc, char* argv[]) {
     cv::Mat frame;
     auto image_message = is.consume(frames);
     auto image = is::msgpack<is::msg::camera::CompressedImage>(image_message);
-    Pattern pattern;
-
-    auto req_id = client.request("pattern.find", image_message->Message());
-    auto reply = client.receive(1s);
     frame = cv::imdecode(image.data, CV_LOAD_IMAGE_COLOR);
-    if (reply != nullptr) {
-      if (reply->Message()->CorrelationId() == req_id) {
-        pattern = is::msgpack<Pattern>(reply);
-        if (pattern.found) {
-          bool first = true;
-          for (auto& p : pattern.points) {
-            cv::circle(frame, cv::Point2d(p.x, p.y), 3, first ? cv::Scalar(0, 0, 255) : cv::Scalar(0, 255, 0), 3);
-            first = false;
-          }
-        }
-      } else {
-        is::logger()->warn("Invalid correlation id.");
-      }
-    } else {
-      is::logger()->warn("Empty message.");
+
+    AmqpClient::Envelope::ptr_t reply;
+    do {
+      auto req_id = client.request("pattern.find", image_message->Message());
+      reply = fifi::wait(client, req_id, 1s);
+    } while (reply == nullptr);
+
+    Pattern pattern = is::msgpack<Pattern>(reply);
+
+    do {
+      auto req_id = client.request("pattern.get_pose", is::msgpack(pattern));
+      reply = fifi::wait(client, req_id, 1s);
+    } while (reply == nullptr);
+
+    Odometry odo = is::msgpack<Odometry>(reply);
+
+    cv::putText(frame, std::to_string(odo.x) + ";" + std::to_string(odo.y) + ";" + std::to_string(odo.th),
+                cv::Point2f(50, 100), 1, 4, cv::Scalar(0, 255, 0), 6);
+    bool first = true;
+    for (auto& p : pattern.points) {
+      cv::circle(frame, cv::Point2d(p.x, p.y), 3, first ? cv::Scalar(0, 0, 255) : cv::Scalar(0, 255, 0), 3);
+      first = false;
     }
 
     cv::imshow("Pattern", frame);

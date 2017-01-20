@@ -261,7 +261,7 @@ std::vector<cv::Point2d> find_pattern(cv::Mat image, int const& m, int const& n)
   const double AREA_MAX = 500;
   const double AREA_RATIO_THR = 0.93;
   const double F_THR = 0.6;
-  const double BIN_THR = 150.0;
+  const double BIN_THR = 130.0;
 
   cv::Mat imbin, imblur;
   std::vector<std::vector<cv::Point>> initial_contours;
