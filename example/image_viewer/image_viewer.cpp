@@ -5,8 +5,9 @@
 #include <is/is.hpp>
 #include <opencv2/highgui.hpp>
 
-using namespace is::msg::camera;
 namespace po = boost::program_options;
+using namespace is::msg::camera;
+using namespace std::chrono_literals;
 
 int main(int argc, char* argv[]) {
   std::string uri;
@@ -43,15 +44,15 @@ int main(int argc, char* argv[]) {
   auto is = is::connect(uri);
 
   auto client = is::make_client(is);
-  
+
+  auto image_type = [](std::string imtype_str) { return imtype_str == "RGB" ? ImageType::RGB : ImageType::GRAY; };
   sample_rate = {fps};
+
   client.request(entity + ".set_sample_rate", is::msgpack(sample_rate));
   client.request(entity + ".set_resolution", is::msgpack(resolution));
+  client.request(entity + ".set_image_type", is::msgpack(image_type(imtype_str)));
 
-  if (imtype_str == "RGB") {
-    client.request(entity + ".set_image_type", is::msgpack(ImageType::RGB));
-  } else if (imtype_str == "GRAY") {
-    client.request(entity + ".set_image_type", is::msgpack(ImageType::GRAY));
+  while (client.receive(1s) != nullptr) {
   }
 
   auto frames = is.subscribe({entity + ".frame"});

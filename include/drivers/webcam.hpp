@@ -4,8 +4,8 @@
 #include <mutex>
 #include <opencv2/videoio.hpp>
 #include <thread>
-#include "../msgs/camera.hpp"
-#include "../msgs/common.hpp"
+#include <is/msgs/camera.hpp>
+#include <is/msgs/common.hpp>
 
 namespace is {
 namespace driver {

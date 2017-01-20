@@ -4,7 +4,7 @@
 #include <chrono>
 #include <string>
 #include <vector>
-#include "../packer.hpp"
+#include <is/packer.hpp>
 
 namespace is {
 namespace msg {

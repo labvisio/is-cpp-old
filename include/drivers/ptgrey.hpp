@@ -9,9 +9,9 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <string>
-#include "../logger.hpp"
-#include "../msgs/camera.hpp"
-#include "../msgs/common.hpp"
+#include <is/logger.hpp>
+#include <is/msgs/camera.hpp>
+#include <is/msgs/common.hpp>
 
 namespace is {
 namespace driver {

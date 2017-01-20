@@ -1,7 +1,7 @@
 SRCS := $(shell find $(SOURCEDIR) -name '*.cpp')
 EXECS := $(SRCS:.cpp=)
 
-SUBDIRS = ptgrey webcam image_viewer sync sync_request find_pattern pattern_viewer
+SUBDIRS = control_robot image_viewer odometry_viewer ptgrey sync_request final_position_controller pattern_viewer webcam find_pattern pioneer sync
 
 .PHONY: subdirs $(SUBDIRS)
 

@@ -7,3 +7,7 @@ example/sync/sync
 example/sync_request/sync_request
 example/find_pattern/find_pattern
 example/pattern_viewer/pattern_viewer
+example/pioneer/pioneer
+example/odometry_viewer/odometry_viewer
+example/final_position_controller/final_position_controller
+example/control_robot/control_robot

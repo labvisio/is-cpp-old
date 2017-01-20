@@ -1,10 +1,10 @@
 #ifndef __IS_GW_CAMERA_HPP__
 #define __IS_GW_CAMERA_HPP__
 
-#include "../is.hpp"
-#include "../msgs/camera.hpp"
-#include "../msgs/common.hpp"
-#include "../msgs/cv.hpp"
+#include <is/is.hpp>
+#include <is/msgs/camera.hpp>
+#include <is/msgs/common.hpp>
+#include <is/msgs/cv.hpp>
 
 namespace is {
 namespace gw {

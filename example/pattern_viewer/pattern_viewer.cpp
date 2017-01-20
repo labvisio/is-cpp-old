@@ -1,16 +1,16 @@
 #include <boost/program_options.hpp>
-#include <iostream>
 #include <chrono>
-#include <opencv2/highgui.hpp>
+#include <iostream>
+#include <is/gateways/camera.hpp>
+#include <is/is.hpp>
+#include <is/msgs/camera.hpp>
+#include <is/msgs/common.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
+#include <opencv2/highgui.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-#include <is/gateways/camera.hpp>
-#include <is/is.hpp>
-#include <is/msgs/common.hpp>
-#include <is/msgs/camera.hpp>
 
 using namespace std::chrono_literals;
 using namespace is::msg::camera;
@@ -46,11 +46,12 @@ int main(int argc, char* argv[]) {
   auto is = is::connect(uri);
   auto client = is::make_client(is);
 
-  auto image_type = [&] () { return (imtype_str == "RGB") ? ImageType::RGB : ImageType::GRAY; }();
+  auto image_type = [&]() { return (imtype_str == "RGB") ? ImageType::RGB : ImageType::GRAY; }();
   client.request(entity + ".set_fps", is::msgpack(fps));
   client.request(entity + ".set_resolution", is::msgpack(resolution));
   client.request(entity + ".set_image_type", is::msgpack(image_type));
-  while (client.receive(1s) != nullptr);
+  while (client.receive(1s) != nullptr) {
+  }
 
   auto frames = is.subscribe({entity + ".frame"});
 
@@ -60,28 +61,28 @@ int main(int argc, char* argv[]) {
     auto image = is::msgpack<is::msg::camera::CompressedImage>(image_message);
     Pattern pattern;
 
-      auto req_id = client.request("pattern.find", image_message->Message());
-      auto reply = client.receive(1s);
-      frame = cv::imdecode(image.data, CV_LOAD_IMAGE_COLOR);
-      if (reply != nullptr) {
-        if (reply->Message()->CorrelationId() == req_id) {
-          pattern = is::msgpack<Pattern>(reply);
-          if (pattern.found) {
-            bool first = true;
-            for (auto& p : pattern.points) {
-              cv::circle(frame, cv::Point2d(p.x, p.y), 3, first ? cv::Scalar(0, 0, 255) : cv::Scalar(0, 255, 0), 3);
-              first = false;
-            }
+    auto req_id = client.request("pattern.find", image_message->Message());
+    auto reply = client.receive(1s);
+    frame = cv::imdecode(image.data, CV_LOAD_IMAGE_COLOR);
+    if (reply != nullptr) {
+      if (reply->Message()->CorrelationId() == req_id) {
+        pattern = is::msgpack<Pattern>(reply);
+        if (pattern.found) {
+          bool first = true;
+          for (auto& p : pattern.points) {
+            cv::circle(frame, cv::Point2d(p.x, p.y), 3, first ? cv::Scalar(0, 0, 255) : cv::Scalar(0, 255, 0), 3);
+            first = false;
           }
-        } else {
-          is::logger()->warn("Invalid correlation id.");
-       }
+        }
       } else {
-        is::logger()->warn("Empty message.");
+        is::logger()->warn("Invalid correlation id.");
       }
-
-      cv::imshow("Pattern", frame);
-      cv::waitKey(1);
+    } else {
+      is::logger()->warn("Empty message.");
     }
-    return 0;
+
+    cv::imshow("Pattern", frame);
+    cv::waitKey(1);
   }
+  return 0;
+}
