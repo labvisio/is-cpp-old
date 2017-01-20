@@ -21,6 +21,7 @@ int main(int argc, char* argv[]) {
   std::string uri;
   std::string entity;
   is::msg::camera::Resolution resolution;
+  is::msg::common::SamplingRate sample_rate;
   double fps;
   std::string imtype_str;
 
@@ -47,9 +48,12 @@ int main(int argc, char* argv[]) {
   auto client = is::make_client(is);
 
   auto image_type = [&]() { return (imtype_str == "RGB") ? ImageType::RGB : ImageType::GRAY; }();
-  client.request(entity + ".set_fps", is::msgpack(fps));
+  sample_rate = {fps};
+
+  client.request(entity + ".set_sample_rate", is::msgpack(sample_rate));
   client.request(entity + ".set_resolution", is::msgpack(resolution));
   client.request(entity + ".set_image_type", is::msgpack(image_type));
+
   while (client.receive(1s) != nullptr) {
   }
 
