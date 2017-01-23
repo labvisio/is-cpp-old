@@ -65,9 +65,22 @@ struct Point2d {
 
 struct Pattern {
   std::vector<Point2d> points;
-  bool found;
+  std::string frame;
 
-  MSGPACK_DEFINE_ARRAY(points, found);
+  MSGPACK_DEFINE_ARRAY(points, frame);
+};
+
+struct FrameChangeRequest {
+  std::vector<Pattern> patterns;
+  double z;
+  
+  MSGPACK_DEFINE_ARRAY(patterns, z);
+};
+
+struct Point3d {
+  double x, y, z;
+
+  MSGPACK_DEFINE_ARRAY(x, y, z);
 };
 
 }  // ::common

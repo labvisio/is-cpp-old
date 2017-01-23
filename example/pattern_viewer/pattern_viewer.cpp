@@ -26,7 +26,7 @@ namespace po = boost::program_options;
 namespace fifi {
 
 template <class Time>
- AmqpClient::Envelope::ptr_t wait(is::ServiceClient& client, std::string const& id, Time duration) {
+AmqpClient::Envelope::ptr_t wait(is::ServiceClient& client, std::string const& id, Time duration) {
   auto until = std::chrono::system_clock::now() + duration;
 
   while (1) {
@@ -102,20 +102,34 @@ int main(int argc, char* argv[]) {
     } while (reply == nullptr);
 
     Pattern pattern = is::msgpack<Pattern>(reply);
+    pattern.frame = entity;
 
-    do {
-      auto req_id = client.request("pattern.get_pose", is::msgpack(pattern));
-      reply = fifi::wait(client, req_id, 1s);
-    } while (reply == nullptr);
+    if (!pattern.points.empty()) {
+      FrameChangeRequest fc_request{{pattern, {{}, "ptgrey.1"}}, 650.0};
 
-    Odometry odo = is::msgpack<Odometry>(reply);
+      do {
+        auto req_id = client.request("frame_change.camera_to_world", is::msgpack<FrameChangeRequest>(fc_request));
+        reply = fifi::wait(client, req_id, 1s);
+      } while (reply == nullptr);
 
-    cv::putText(frame, std::to_string(odo.x) + ";" + std::to_string(odo.y) + ";" + std::to_string(odo.th),
-                cv::Point2f(50, 100), 1, 4, cv::Scalar(0, 255, 0), 6);
-    bool first = true;
-    for (auto& p : pattern.points) {
-      cv::circle(frame, cv::Point2d(p.x, p.y), 3, first ? cv::Scalar(0, 0, 255) : cv::Scalar(0, 255, 0), 3);
-      first = false;
+      auto points3d = is::msgpack<std::vector<Point3d>>(reply);
+
+      std::cout << points3d.front().x << ',' << points3d.front().y << ',' << points3d.front().z << '\n';
+
+      do {
+        auto req_id = client.request("pattern.get_pose", is::msgpack(points3d));
+        reply = fifi::wait(client, req_id, 1s);
+      } while (reply == nullptr);
+
+      Odometry odo = is::msgpack<Odometry>(reply);
+
+      cv::putText(frame, std::to_string(odo.x) + ";" + std::to_string(odo.y) + ";" + std::to_string(odo.th),
+                  cv::Point2f(50, 100), 1, 4, cv::Scalar(0, 255, 0), 6);
+      bool first = true;
+      for (auto& p : pattern.points) {
+        cv::circle(frame, cv::Point2d(p.x, p.y), 3, first ? cv::Scalar(0, 0, 255) : cv::Scalar(0, 255, 0), 3);
+        first = false;
+      }
     }
 
     cv::imshow("Pattern", frame);

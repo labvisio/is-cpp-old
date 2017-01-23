@@ -365,7 +365,7 @@ Pattern find_pattern(CompressedImage image) {
   cv::Mat frame = cv::imdecode(image.data, CV_LOAD_IMAGE_COLOR);
   auto vec_points = find_pattern(frame, 3, 4);
   Pattern pattern;
-
+/*
   if (vec_points.empty()) {
     pattern.found = false;
   } else {
@@ -373,6 +373,12 @@ Pattern find_pattern(CompressedImage image) {
       pattern.points.push_back({p.x, p.y});
     }
     pattern.found = true;
+  }
+*/
+  if (!vec_points.empty()) {
+    for (auto& p : vec_points) {
+      pattern.points.push_back({p.x, p.y});
+    }
   }
   return pattern;
 }
