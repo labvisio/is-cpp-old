@@ -15,8 +15,10 @@ struct Connection {
   Channel::ptr_t channel;
   const std::string exchange;
 
+  Connection(std::string const& uri, std::string const& exchange = "data") : Connection(make_channel(uri), exchange) {}
+
   Connection(Channel::ptr_t channel, std::string const& exchange = "data") : channel(channel), exchange(exchange) {
-    // passive durable auto_delete 
+    // passive durable auto_delete
     channel->DeclareExchange(exchange, Channel::EXCHANGE_TYPE_TOPIC, false, false, false);
   }
 
@@ -47,7 +49,7 @@ struct Connection {
   }
 
   template <typename Time>
-  Envelope::ptr_t consume(std::string const& tag, Time const& timeout) {
+  Envelope::ptr_t consume_for(std::string const& tag, Time const& timeout) {
     using namespace std::chrono;
     int timeout_ms = duration_cast<milliseconds>(timeout).count();
     Envelope::ptr_t envelope;

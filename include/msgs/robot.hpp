@@ -7,34 +7,29 @@ namespace is {
 namespace msg {
 namespace robot {
 
-struct Odometry {
-  double x;   //  [mm]
-  double y;   //  [mm]
-  double th;  //  [deg]
-
-  MSGPACK_DEFINE_ARRAY(x, y, th);
+struct Pose {
+  is::msg::geometry::Point position;  // [mm]
+  double heading;                     // [deg]
+  IS_DEFINE_MSG(position, heading);
 };
 
-struct Velocities {
-  double v;  //  [mm/s]
-  double w;  //  [deg/s]
-
-  MSGPACK_DEFINE_ARRAY(v, w);
+struct Speed {
+  double linear;   // [mm/s]
+  double angular;  // [deg/s]
+  IS_DEFINE_MSG(linear, angular);
 };
 
-struct FinalPosition {
-  // one of {
-  Odometry current;
-  std::string odometry_source;
-  // }
-  Odometry desired;
+struct ControlActionRequest {
+  Pose current_pose;
+  Pose desired_pose;
+
   double gain_x;
   double gain_y;
   double max_vel_x;
   double max_vel_y;
   double center_offset;
-  
-  MSGPACK_DEFINE_ARRAY(current, odometry_source, desired, gain_x, gain_y, max_vel_x, max_vel_y, center_offset);
+
+  IS_DEFINE_MSG(current_pose, desired_pose, gain_x, gain_y, max_vel_x, max_vel_y, center_offset);
 };
 
 }  // ::robot

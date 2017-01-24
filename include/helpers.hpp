@@ -8,6 +8,7 @@
 
 namespace is {
 
+using namespace std::chrono;
 using namespace AmqpClient;
 
 Channel::ptr_t make_channel(std::string const& uri) {
@@ -22,12 +23,10 @@ Channel::ptr_t make_channel(std::string const& uri) {
 }
 
 void set_timestamp(BasicMessage::ptr_t message) {
-  using namespace std::chrono;
   message->Timestamp(system_clock::now().time_since_epoch().count());
 }
 
 auto latency(Envelope::ptr_t envelope) {
-  using namespace std::chrono;
   auto now = system_clock::now().time_since_epoch().count();
   auto diff = nanoseconds(now - envelope->Message()->Timestamp());
   return duration_cast<milliseconds>(diff).count();

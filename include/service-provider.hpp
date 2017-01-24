@@ -4,7 +4,9 @@
 #include <SimpleAmqpClient/SimpleAmqpClient.h>
 #include <atomic>
 #include <string>
+#include <unordered_map>
 #include "logger.hpp"
+
 namespace is {
 
 using Request = Envelope::ptr_t;

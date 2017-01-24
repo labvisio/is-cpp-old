@@ -1,80 +1,46 @@
 #ifndef __IS_MSG_COMMON_HPP__
 #define __IS_MSG_COMMON_HPP__
 
-#include <chrono>
-#include <string>
-#include <vector>
-#include <is/packer.hpp>
+#include "../packer.hpp"
 
 namespace is {
 namespace msg {
 namespace common {
 
-enum class Status { OK, FAILED };
-
-struct Delay {
-  int milliseconds;
-
-  MSGPACK_DEFINE_ARRAY(milliseconds);
+struct Status {
+  std::string value;
+  std::string why;
+  IS_DEFINE_MSG(value, why);
 };
 
-struct TimeStamp {
-  int64_t time_point;
+namespace status {
+const auto ok = Status{"ok", ""};
+const auto error = [](auto const& why) { return Status{"error", why}; };
+}
 
-  TimeStamp() { time_point = std::chrono::system_clock::now().time_since_epoch().count(); }
+struct Delay {
+  unsigned int milliseconds;
+  IS_DEFINE_MSG(milliseconds);
+};
 
-  MSGPACK_DEFINE_ARRAY(time_point);
+struct Timestamp {
+  unsigned int nanoseconds;  // time since machine epoch in nanoseconds
+  IS_DEFINE_MSG(nanoseconds);
 };
 
 struct SamplingRate {
-  double rate;     // [Hz]
-  int64_t period;  // [ms]
-
-  SamplingRate() {}
-
-  SamplingRate(double r) {
-    rate = r;
-    period = 0;
-  }
-
-  SamplingRate(int64_t p) {
-    period = p;
-    rate = 0.0;
-  }
-
-  MSGPACK_DEFINE_ARRAY(rate, period);
+  boost::optional<double> rate;          // [Hz]
+  boost::optional<unsigned int> period;  // [ms]
+  IS_DEFINE_MSG(rate, period);
 };
 
 struct EntityList {
   std::vector<std::string> list;
-
-  EntityList() {}
-
-  EntityList(std::vector<std::string> l) {
-    list = l;
-  }
-
-  MSGPACK_DEFINE_ARRAY(list);
-};
-
-struct Point2d {
-  double x, y;
-
-  MSGPACK_DEFINE_ARRAY(x, y);
-};
-
-struct Pattern {
-  std::vector<Point2d> points;
-  bool found;
-
-  MSGPACK_DEFINE_ARRAY(points, found);
+  IS_DEFINE_MSG(list);
 };
 
 }  // ::common
 }  // ::msg
 }  // ::is
-
-// Enum packing must be done on global namespace
-MSGPACK_ADD_ENUM(is::msg::common::Status);
 
 #endif  // __IS_MSG_COMMON_HPP__
