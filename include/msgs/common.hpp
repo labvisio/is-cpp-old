@@ -1,11 +1,14 @@
 #ifndef __IS_MSG_COMMON_HPP__
 #define __IS_MSG_COMMON_HPP__
 
+#include <chrono>
 #include "../packer.hpp"
 
 namespace is {
 namespace msg {
 namespace common {
+
+using namespace std::chrono;
 
 struct Status {
   std::string value;
@@ -24,13 +27,13 @@ struct Delay {
 };
 
 struct Timestamp {
-  unsigned int nanoseconds;  // time since machine epoch in nanoseconds
+  uint64_t nanoseconds = system_clock::now().time_since_epoch().count();  // time since machine epoch in nanoseconds
   IS_DEFINE_MSG(nanoseconds);
 };
 
 struct SamplingRate {
-  boost::optional<double> rate;          // [Hz]
-  boost::optional<unsigned int> period;  // [ms]
+  boost::optional<double> rate = boost::none;          // [Hz]
+  boost::optional<unsigned int> period = boost::none;  // [ms]
   IS_DEFINE_MSG(rate, period);
 };
 

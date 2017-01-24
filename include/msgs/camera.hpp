@@ -32,6 +32,11 @@ struct ImageType {
   IS_DEFINE_MSG(value);
 };
 
+namespace image_type {
+const ImageType rgb{"rgb"};
+const ImageType gray{"gray"};
+}
+
 }  // ::camera
 }  // ::msg
 }  // ::is

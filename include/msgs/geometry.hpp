@@ -10,7 +10,7 @@ namespace geometry {
 struct Point {
   double x;
   double y;
-  boost::optional<double> z;
+  boost::optional<double> z = boost::none;
   IS_DEFINE_MSG(x, y, z);
 };
 
