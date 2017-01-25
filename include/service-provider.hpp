@@ -4,6 +4,7 @@
 #include <SimpleAmqpClient/SimpleAmqpClient.h>
 #include <atomic>
 #include <string>
+#include <exception>
 #include <unordered_map>
 #include "logger.hpp"
 
@@ -28,7 +29,7 @@ class ServiceProvider {
  public:
   ServiceProvider(std::string const& name, Channel::ptr_t const& channel, std::string const& exchange = "services")
       : name(name), channel(channel), exchange(exchange) {
-    // passive durable auto_delete 
+    // passive durable auto_delete
     channel->DeclareExchange(exchange, Channel::EXCHANGE_TYPE_TOPIC, false, false, false);
     // passive, durable, exclusive, auto_delete
     Table arguments{{TableKey("x-expires"), TableValue(30000)}};
@@ -64,17 +65,23 @@ class ServiceProvider {
 
       if (service != map.end()) {
         log::info("({}) New service request \"{}\"", name, request->RoutingKey());
-        auto response = service->second(request);
-        response->CorrelationId(request->Message()->CorrelationId());
-        log::info("({}) Done processing \"{}\" id:\"{}\"", name, request->RoutingKey(), response->CorrelationId());
+        try {
+          auto reply = service->second(request);
+          reply->CorrelationId(request->Message()->CorrelationId());
+          log::info("({}) Done processing \"{}\" id:\"{}\"", name, request->RoutingKey(), reply->CorrelationId());
 
-        auto&& route = request->Message()->ReplyTo();
-        auto&& pos = route.find_first_of(';');
-        if (pos == std::string::npos || pos + 1 > route.size()) {
-          channel->BasicPublish(exchange, route, response);
-        } else {
-          response->ReplyTo(route.substr(pos + 1));
-          channel->BasicPublish(exchange, route.substr(0, pos), response);
+          auto&& mandatory{true};
+          auto&& route = request->Message()->ReplyTo();
+          auto&& pos = route.find_first_of(';');
+          if (pos == std::string::npos || pos + 1 > route.size()) {
+            channel->BasicPublish(exchange, route, reply, mandatory);
+          } else {
+            reply->ReplyTo(route.substr(pos + 1));
+            channel->BasicPublish(exchange, route.substr(0, pos), reply, mandatory);
+          }
+        } catch (std::exception const& e) {
+          log::error("({}) Service \"{}\" throwed an exception. \n\t@reason: \"{}\"", name, request->RoutingKey(),
+                    e.what());
         }
       } else {
         log::warn("({}) Invalid service requested \"{}\"", name, request->RoutingKey());

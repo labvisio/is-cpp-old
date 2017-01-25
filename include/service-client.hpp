@@ -80,10 +80,11 @@ class ServiceClient {
   template <typename Time>
   auto receive_until(Time const& deadline) {
     auto timeout = deadline - system_clock::now();
-    if (duration_cast<milliseconds>(timeout).count() < 1.0) {
-      return nullptr;
+    Envelope::ptr_t envelope;
+    if (duration_cast<milliseconds>(timeout).count() >= 1.0) {
+      envelope = receive_for(timeout);
     }
-    return receive_for(timeout);
+    return envelope;
   }
 
   template <typename Time>

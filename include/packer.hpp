@@ -7,6 +7,7 @@
 #include <msgpack.hpp>
 #include <sstream>
 #include <string>
+#include <chrono>
 #include <vector>
 
 #define IS_DEFINE_MSG MSGPACK_DEFINE_ARRAY
