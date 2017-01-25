@@ -12,12 +12,12 @@ using namespace std::chrono;
 using namespace AmqpClient;
 
 Channel::ptr_t make_channel(std::string const& uri) {
-  logger()->info("Trying to connect to broker at \"{}\"", uri);
+  log::info("Trying to connect to broker at \"{}\"", uri);
   try {
-    logger()->info("Connection successful");
+    log::info("Connection successful");
     return Channel::CreateFromUri(uri);
   } catch (...) {
-    logger()->critical("Failed to establish connection to broker!");
+    log::critical("Failed to establish connection to broker!");
     exit(1);
   }
 }

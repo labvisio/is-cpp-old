@@ -15,6 +15,28 @@ std::shared_ptr<spdlog::logger> logger() {
   return logger.log;
 }
 
+namespace log {
+  template <class ...Args>
+  void info(Args&&... args) {
+    logger()->info(args...);
+  }
+
+  template <class ...Args>
+  void warn(Args&&... args) {
+    logger()->warn(args...);
+  }
+  
+  template <class ...Args>
+  void error(Args&&... args) {
+    logger()->error(args...);
+  }
+  
+  template <class ...Args>
+  void critical(Args&&... args) {
+    logger()->critical(args...);
+  }
+}
+
 }  // ::is
 
 #endif  // __IS_LOGGER_HPP__

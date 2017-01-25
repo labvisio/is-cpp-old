@@ -54,7 +54,7 @@ class ServiceClient {
         channel->BasicPublish(exchange, route.substr(0, pos), message, mandatory);
       }
     } catch (MessageReturnedException) {
-      is::logger()->warn("No route for {}", route);
+      log::warn("No route for {}", route);
     }
 
     return id;

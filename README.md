@@ -17,7 +17,7 @@ chmod 755 install
 Using the library
 -----------------
 Everything is header only, just include the headers in your project, for instance if
-you copy the files to **/usr/local/include/is**
+you copy the files to **/usr/local/include/is** (this is done automatically by the install script).
 
 ```c++
 #include <is/is.hpp>
@@ -40,8 +40,8 @@ curl -sSL https://get.docker.com/ | sh
 
 Messages and Serialization
 ----------
-A number of standard messages are provided. 
-New messages can be defined using the **MSGPACK_DEFINE_ARRAY** macro.
+A number of standard messages are provided. (See the **msgs** folder)
+New messages can be defined using the **IS_DEFINE_MSG** macro.
 
 ```c++
 struct Entity {
@@ -49,7 +49,7 @@ struct Entity {
   std::string type;
   std::vector<std::string> services;
     
-  MSGPACK_DEFINE_ARRAY(id, type, services);
+  IS_DEFINE_MSG(id, type, services);
 };
 ```  
 Messages can be serialized/deserialized according to the 
@@ -74,7 +74,7 @@ Publish/Subscribe Pattern Example
 #include <is/is.hpp>
 
 int main(int argc, char* argv[]) {
-  /*
+  /* 
       Creates a connection to the broker running on localhost at port 5672, 
     with credentials guest:guest (username:password respectively).
   */
@@ -144,8 +144,9 @@ using namespace std::chrono_literals;
 
 int main(int argc, char* argv[]) {
   std::string uri = "amqp://guest:guest@localhost:5672";
-  auto is = is::connect(uri);
   
+  auto is = is::connect(uri);
+
   // Creates a service client using the same connection.
   auto client = is::make_client(is);
 
@@ -157,26 +158,18 @@ int main(int argc, char* argv[]) {
   */
   auto req_id = client.request("math.increment", is::msgpack(0));
 
-  /* Block waiting for any reply with 10s timeout. */
-  auto reply = client.receive(10s);
+  /*
+      Block waiting for the reply with id="req_id" with 1s timeout. The 
+    policy "discard_others" will dicard any other reply received. This 
+    will not happen since we only made one request.
+  */
+  auto reply = client.receive_for(1s, req_id, is::policy::discard_others);
 
   if (reply == nullptr) {
-    /* If the reply is a nullptr than we did'nt receive anything... */
-    is::logger()->error("Request timeout!");
-  } 
-  else if (reply->Message()->CorrelationId() != req_id) {
-    /* 
-        If the correlation id is different, then we received a different 
-      reply. Since we only sent one request out this condition should 
-      never happen.
-    */
-    is::logger()->error("Invalid reply");
-  } 
-  else {
-    /* "Reply: 1" */
-    is::logger()->info("Reply: {}", is::msgpack<int>(reply));
+    is::log::error("Request {} timeout!", req_id);
+  } else {
+    is::log::info("Reply: {}", is::msgpack<int>(reply));
   }
-
 }
 ```
 

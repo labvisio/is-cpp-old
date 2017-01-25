@@ -36,7 +36,7 @@ class ServiceProvider {
   }
 
   void expose(std::string const& binding, service_handle_t service) {
-    logger()->info("({}) Exposing new service on topic \"{}\"", name, binding);
+    log::info("({}) Exposing new service on topic \"{}\"", name, binding);
     channel->BindQueue(name, exchange, binding);
     map.emplace(binding, service);
   }
@@ -44,7 +44,7 @@ class ServiceProvider {
   bool request_is_valid(Envelope::ptr_t request) {
     auto&& valid = request->Message()->CorrelationIdIsSet() && request->Message()->ReplyToIsSet();
     if (!valid) {
-      logger()->warn("({}) Malformed request @\"{}\"", name, request->RoutingKey());
+      log::warn("({}) Malformed request @\"{}\"", name, request->RoutingKey());
     }
     return valid;
   }
@@ -53,7 +53,7 @@ class ServiceProvider {
     // no_local, no_ack, exclusive
     auto tag = channel->BasicConsume(name, "", true, false, false);
 
-    logger()->info("({}) Listening incoming service requests", name);
+    log::info("({}) Listening incoming service requests", name);
     while (1) {
       Envelope::ptr_t request;
       do {
@@ -63,10 +63,10 @@ class ServiceProvider {
       auto service = map.find(request->RoutingKey());
 
       if (service != map.end()) {
-        logger()->info("({}) New service request \"{}\"", name, request->RoutingKey());
+        log::info("({}) New service request \"{}\"", name, request->RoutingKey());
         auto response = service->second(request);
         response->CorrelationId(request->Message()->CorrelationId());
-        logger()->info("({}) Done processing \"{}\" id:\"{}\"", name, request->RoutingKey(), response->CorrelationId());
+        log::info("({}) Done processing \"{}\" id:\"{}\"", name, request->RoutingKey(), response->CorrelationId());
 
         auto&& route = request->Message()->ReplyTo();
         auto&& pos = route.find_first_of(';');
@@ -77,7 +77,7 @@ class ServiceProvider {
           channel->BasicPublish(exchange, route.substr(0, pos), response);
         }
       } else {
-        logger()->warn("({}) Invalid service requested \"{}\"", name, request->RoutingKey());
+        log::warn("({}) Invalid service requested \"{}\"", name, request->RoutingKey());
       }
 
       channel->BasicAck(request);
