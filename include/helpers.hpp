@@ -3,6 +3,7 @@
 
 #include <SimpleAmqpClient/SimpleAmqpClient.h>
 #include <memory>
+#include <chrono>
 #include <sstream>
 #include "logger.hpp"
 

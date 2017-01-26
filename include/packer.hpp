@@ -7,7 +7,6 @@
 #include <msgpack.hpp>
 #include <sstream>
 #include <string>
-#include <chrono>
 #include <vector>
 
 #define IS_DEFINE_MSG MSGPACK_DEFINE_ARRAY
@@ -18,7 +17,6 @@
 
 namespace is {
 
-using namespace std::chrono;
 using namespace AmqpClient;
 
 template <class T>
@@ -41,7 +39,6 @@ BasicMessage::ptr_t msgpack(T const& data) {
   msgpack::pack(body, data);
   auto message = BasicMessage::Create(body.str());
   message->ContentEncoding("msgpack");
-  message->Timestamp(system_clock::now().time_since_epoch().count());
   return message;
 }
 
