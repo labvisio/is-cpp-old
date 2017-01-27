@@ -15,8 +15,9 @@ using namespace AmqpClient;
 Channel::ptr_t make_channel(std::string const& uri) {
   log::info("Trying to connect to broker at \"{}\"", uri);
   try {
+    auto channel = Channel::CreateFromUri(uri);
     log::info("Connection successful");
-    return Channel::CreateFromUri(uri);
+    return channel;
   } catch (...) {
     log::critical("Failed to establish connection to broker!");
     exit(1);

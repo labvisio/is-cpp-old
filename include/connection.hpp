@@ -13,14 +13,6 @@ namespace is {
 using namespace AmqpClient;
 using namespace std::chrono;
 
-namespace policy {
-
-struct no_route_block_for {
-  milliseconds duration;
-  no_route_block_for(auto duration) : duration(duration_cast<milliseconds>(duration)) {}
-};
-}
-
 struct Connection {
   Channel::ptr_t channel;
   const std::string exchange;
@@ -32,20 +24,16 @@ struct Connection {
     channel->DeclareExchange(exchange, Channel::EXCHANGE_TYPE_TOPIC, false, false, false);
   }
 
-  void publish(std::string const& topic, BasicMessage::ptr_t message, bool mandatory = false) {
-    if (!message->TimestampIsSet()) {
-      set_timestamp(message);
-    }
-    channel->BasicPublish(exchange, topic, message, mandatory);
-  }
-
-  void publish(std::string const& topic, BasicMessage::ptr_t message, policy::no_route_block_for tag) {
+  bool publish(std::string const& topic, BasicMessage::ptr_t message, bool mandatory = false) {
     try {
-      publish(topic, message, true);
+      if (!message->TimestampIsSet()) {
+        set_timestamp(message);
+      }
+      channel->BasicPublish(exchange, topic, message, mandatory);
     } catch (MessageReturnedException) {
-      is::log::info("No consumer on topic \"{}\", sleeping for {} ms ...", topic, tag.duration.count());
-      std::this_thread::sleep_for(tag.duration);
+      return false;
     }
+    return true;
   }
 
   std::string subscribe(std::string const& topic, int queue_size = 1) {
@@ -133,7 +121,7 @@ struct Connection {
       });
       auto min = (*minmax.first)->Message()->Timestamp();
       auto max = (*minmax.second)->Message()->Timestamp();
-      
+
       auto diff_ms = duration_cast<milliseconds>(nanoseconds(max - min)).count();
       if (diff_ms < period_ms) {
         break;
