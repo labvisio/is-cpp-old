@@ -3,10 +3,11 @@ is
 
 Easy to use IoT messaging middleware C++ implementation. 
 
-Installing Dependencies
------------------
-On linux run the **install** script to install all the dependencies. 
-**(!Tested only on Ubuntu 14.04 and 16.04!)**.
+Installing the library/dependencies
+------------------------------------
+**(!Tested on Ubuntu 14.04, 16.04 and 16.10)**.
+
+On linux run the **install** script:
 
 ```shell
 cd scripts
@@ -14,10 +15,12 @@ chmod 755 install
 ./install
 ```
 
+Building/Linking 
+-----------------
+The easiest way to to use **libis** is to use CMake. An example can be found in the examples folder.  
+
 Using the library
 -----------------
-Everything is header only, just include the headers in your project, for instance if
-you copy the files to **/usr/local/include/is** (this is done automatically by the install script).
 
 ```c++
 #include <is/is.hpp>
@@ -85,7 +88,7 @@ int main(int argc, char* argv[]) {
     A tag representing the subscription is returned. The tag can later
     be used to consume messages.   
   */
-  auto tag = is.subscribe({"device.temperature"});
+  auto tag = is.subscribe("device.temperature");
 
   /*
       Publishes a message to the "device.temperature" topic. The messages 

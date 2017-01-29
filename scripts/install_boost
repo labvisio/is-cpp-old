@@ -1,0 +1,18 @@
+#!/bin/bash
+
+__USER=$USER
+
+# Get super user privileges
+if [[ $EUID != 0 ]]; then
+    sudo "$0" "$@"
+    exit $?
+fi
+
+wget https://sourceforge.net/projects/boost/files/boost/1.63.0/boost_1_63_0.tar.gz
+tar -xvf boost_1_63_0.tar.gz
+rm boost_1_63_0.tar.gz
+cd boost_1_63_0/
+./bootstrap.sh
+./b2 install cxxflags=-std=gnu++0x --with-timer --with-chrono --with-system --with-fiber --with-program_options link=shared
+ldconfig
+cd ..

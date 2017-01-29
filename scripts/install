@@ -8,185 +8,45 @@ if [[ $EUID != 0 ]]; then
     exit $?
 fi
 
-apt-get update
-
-printf '%-50s' ' [x] Installing dependencies'   
-declare -a packages=( \
-  "build-essential"   \
-  "cmake"             \
-  "git"               \
-  "pkg-config"        \
-  "libssl-dev"        \
-  "autoconf"          \
-  "libtool"           \
-  "libpgm-dev"        \
-  "libpgm-5.*"        \
-  "liblapack-dev"     \
-  "liblapacke-dev"    \
-  "libopenblas-dev"   \
-  "libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev" \ # opencv
-  "libarmadillo-dev"  \ 
-	"libvorbis-dev libudev-dev libjpeg-dev libopenal-dev" \ #sfml
-)
-
-for package in "${packages[@]}"
-do
-	apt-get install -y $package
-done
-printf 'done!\n'   
-
-printf '%-50s' ' [x] Searching for boost...'   
-BOOST_VERSION=`ldconfig -p | grep -Eo 'libboost_[a-z]+.so.1.[0-9]+' | head -n 1 | cut -d . -f 4`
-
-# boost installation 
-if (("$BOOST_VERSION" < 60)); then
-	printf 'not found! Installing...\n'   
-
-	wget https://sourceforge.net/projects/boost/files/boost/1.60.0/boost_1_60_0.tar.gz/download
-	tar -xvf download
-	rm download
-	cd boost_1_60_0/
-	./bootstrap.sh
-	sudo ./b2 install --with-timer --with-chrono --with-system --with-program_options link=shared
-	sudo ./b2 install --with-timer --with-chrono --with-system --with-program_options link=static
-
-	cd ..
-  rm -rf boost_1_60_0/
-	sudo ldconfig
-else
-	printf 'found!\n'   
-fi
-
-# librabbitmq installation 
-printf '%-50s' ' [x] Searching for librabbitmq...'   
-pkg-config --exists librabbitmq # exit code ($?) = 0 if successful  
-
-if [[ $? != 0 ]]; then 
-	printf 'not found! Installing...\n'   
-	
-	git clone https://github.com/alanxz/rabbitmq-c
-	cd rabbitmq-c
-	mkdir build
-	cd build
-	cmake -DBUILD_SHARED_LIBS=ON -DBUILD_STATIC_LIBS=ON -DENABLE_THREAD_SAFETY=ON -DENABLE_SSL_SUPPORT=ON ..
-
-	make -j `nproc`
-	sudo make install
-	if [[ $LD_LIBRARY_PATH != *"/usr/local/lib/x86_64-linux-gnu"* ]]; then   
-		echo 'export LD_LIBRARY_PATH=/usr/local/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH' >> ~/.bashrc
+function pull {
+	if cd $(basename $1); then 
+		git pull 
+		cd .. 
+	else 
+		git clone $1 
 	fi
+}
 
-	cd ../..
-	rm -rf rabbitmq-c/
-	sudo ldconfig
-else
-	printf 'found!\n'   
-fi
+apt-get update
+apt-get install -y build-essential cmake git pkg-config autoconf libtool # base
+apt-get install -y libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev # opencv
+apt-get install -y libarmadillo-dev libopenblas-dev liblapack-dev liblapacke-dev # others 
+apt-get install -y libvorbis-dev libudev-dev libjpeg-dev libopenal-dev # sfml 
+apt-get install -y libavcodec-dev libavutil-dev # libav 
 
-# libSimpleAmqpClient installation 
-printf '%-50s' ' [x] Searching for libSimpleAmqpClient...'   
-pkg-config --exists libSimpleAmqpClient # exit code ($?) = 0 if successful  
+mkdir -p /tmp/is_install/ && cd /tmp/is_install/ 
 
-if [[ $? != 0 ]]; then 
-	printf 'not found! Installing...\n'   
+pull https://github.com/alanxz/rabbitmq-c
+pull https://github.com/alanxz/SimpleAmqpClient
+pull https://github.com/msgpack/msgpack-c
+pull https://github.com/gabime/spdlog
+pull https://github.com/opencv/opencv
+pull https://github.com/labviros/is-cpp
 
-	git clone https://github.com/alanxz/SimpleAmqpClient
-  cd SimpleAmqpClient
-	mkdir build
-	cd build
+echo "
+find_package(Boost 1.63.0 REQUIRED QUIET)
 
-	cmake -DENABLE_SSL_SUPPORT=ON -DBUILD_SHARED_LIBS=OFF ..
-	make -j `nproc`
-	sudo make install
-  
-  cmake -DENABLE_SSL_SUPPORT=ON -DBUILD_SHARED_LIBS=ON ..
-	make -j `nproc`
-	sudo make install
+if(NOT Boost_FOUND)
+  execute_process(COMMAND install_boost
+                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+endif() 
 
-	cd ../..
-	rm -rf SimpleAmqpClient/
-	sudo ldconfig
-else
-	printf 'found!\n'   
-fi
+add_subdirectory("rabbitmq-c")
+add_subdirectory("SimpleAmqpClient")
+add_subdirectory("msgpack-c")
+add_subdirectory("spdlog")
+add_subdirectory("is-cpp")
 
-# msgpack installation 
-printf '%-50s' ' [x] Searching for msgpack...'   
-pkg-config --exists msgpack # exit code ($?) = 0 if successful  
-if [[ $? != 0 ]]; then 
-	printf 'not found! Installing...\n'   
+" > CMakeLists.txt
 
-  if [ ! -d "msgpack-c" ]; then
-  	git clone https://github.com/msgpack/msgpack-c.git
-  fi
-
-	cd msgpack-c
-	mkdir build
-	cd build
-
-	cmake -DMSGPACK_ENABLE_CXX=ON -DMSGPACK_CXX11=ON -DMSGPACK_BOOST=ON -DMSGPACK_ENABLE_SHARED=ON ..
-	make -j `nproc`
-	sudo make install
-
-  cmake -DMSGPACK_ENABLE_CXX=ON -DMSGPACK_CXX11=ON -DMSGPACK_BOOST=ON -DMSGPACK_ENABLE_SHARED=OFF ..
-	make -j `nproc`
-	sudo make install
-
-	cd ../..
-	rm -rf msgpack-c/
-	sudo ldconfig
-else
-	printf 'found!\n'   
-fi
-
-
-# opencv installation 
-printf '%-50s' ' [x] Searching for opencv...'   
-pkg-config --exists opencv # exit code ($?) = 0 if successful  
-if [[ $? != 0 ]]; then 
-	printf 'not found! Installing...\n'   
-
-  if [ ! -d "opencv" ]; then
-  	git clone https://github.com/opencv/opencv
-  fi
-
-	cd opencv
-  mkdir release
-  cd release
-  cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local ..
-
-	make -j `nproc`
-  failed=$?
-	sudo make install
-
-	cd ../..
-  if [[ failed == 0 ]]; then
-    rm -rf opencv/
-    sudo ldconfig
-  fi
-else
-	printf 'found!\n'   
-fi
-
-# spdlog installation 
-printf '%-50s' ' [x] Searching for spdlog...'   
-if [ ! -d "/usr/local/include/spdlog" ]; then
-	printf 'not found! Installing...\n'   
-
-	git clone https://github.com/gabime/spdlog
-	cd spdlog
-	mv include/spdlog /usr/local/include/
-  cd ..
-  rm -rf spdlog
-else
-	printf 'found!\n'   
-fi
-
-printf '[x] Copying library files ...\n'   
-
-if [ ! -d "/usr/local/include/is" ]; then
-	sudo mkdir /usr/local/include/is
-fi
-sudo cp -rf ../include/* /usr/local/include/is
-
-printf '[x] Done...\n'   
+mkdir -p build && cd build && cmake .. && make install

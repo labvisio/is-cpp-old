@@ -12,7 +12,7 @@ namespace is {
 using namespace std::chrono;
 using namespace AmqpClient;
 
-Channel::ptr_t make_channel(std::string const& uri) {
+inline Channel::ptr_t make_channel(std::string const& uri) {
   log::info("Trying to connect to broker at \"{}\"", uri);
   try {
     auto channel = Channel::CreateFromUri(uri);
@@ -24,11 +24,11 @@ Channel::ptr_t make_channel(std::string const& uri) {
   }
 }
 
-void set_timestamp(BasicMessage::ptr_t message) {
+inline void set_timestamp(BasicMessage::ptr_t message) {
   message->Timestamp(system_clock::now().time_since_epoch().count());
 }
 
-auto latency(Envelope::ptr_t envelope) {
+inline auto latency(Envelope::ptr_t envelope) {
   auto now = system_clock::now().time_since_epoch().count();
   auto diff = nanoseconds(now - envelope->Message()->Timestamp());
   return duration_cast<milliseconds>(diff).count();
