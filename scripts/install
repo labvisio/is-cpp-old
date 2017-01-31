@@ -8,45 +8,108 @@ if [[ $EUID != 0 ]]; then
     exit $?
 fi
 
-function pull {
-	if cd $(basename $1); then 
-		git pull 
-		cd .. 
-	else 
-		git clone $1 
+function find_pkg {
+	if ! pkg-config --exists $1; then
+		echo "$1 not found..."
+		return 1
 	fi
+	echo "$1 found..."
+	return 0
+}
+
+function find_boost {
+	if [ "$(ldconfig -p | grep boost | grep $1)" == "" ]; then
+		echo "Boost $1 not found..."
+		return 1
+	fi 
+	echo "Boost $1 found..."
+	return 0
+}
+
+function find_folder {
+	if [ ! -d $1 ]; then
+		echo "$(basename $1) not found..."
+		return 1
+	fi
+	echo "$(basename $1) found..."
+	return 0
+}
+
+function install_cmake {
+	cd $1
+	mkdir -p build
+	cd build
+	cmake -DCMAKE_INSTALL_LIBDIR=lib .. 
+	make install -j `nproc`
+	cd ../..
+}
+
+function import_git {
+	if [ ! -d $(basename $1) ]; then
+		git clone $1
+	fi
+}
+
+function install_cmake_git {
+	import_git $1
+	install_cmake $(basename $1)
+}
+
+function install_headers_git {
+	folder=$(basename $1)
+	if [ ! -d $folder ]; then
+		git clone $1
+	fi
+	cd $folder
+	cp -r include/* /usr/local/include
+	cd ..
+}
+
+function install_boost {
+	wget https://sourceforge.net/projects/boost/files/boost/1.63.0/boost_1_63_0.tar.gz
+	tar -xvf boost_1_63_0.tar.gz
+	rm boost_1_63_0.tar.gz
+	cd boost_1_63_0/
+	./bootstrap.sh
+	./b2 install cxxflags=-std=gnu++0x --with-timer --with-chrono --with-system --with-fiber --with-program_options link=shared
+	ldconfig
+	cd ..
 }
 
 apt-get update
 apt-get install -y build-essential cmake git pkg-config autoconf libtool # base
 apt-get install -y libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev # opencv
-apt-get install -y libarmadillo-dev libopenblas-dev liblapack-dev liblapacke-dev # others 
+apt-get install -y libssl-dev libpgm-dev libarmadillo-dev libopenblas-dev liblapack-dev liblapacke-dev # others 
 apt-get install -y libvorbis-dev libudev-dev libjpeg-dev libopenal-dev # sfml 
 apt-get install -y libavcodec-dev libavutil-dev # libav 
 
-mkdir -p /tmp/is_install/ && cd /tmp/is_install/ 
+this_path=$PWD
+mkdir -p /tmp/is_install/ && cd /tmp/is_install/
 
-pull https://github.com/alanxz/rabbitmq-c
-pull https://github.com/alanxz/SimpleAmqpClient
-pull https://github.com/msgpack/msgpack-c
-pull https://github.com/gabime/spdlog
-pull https://github.com/opencv/opencv
-pull https://github.com/labviros/is-cpp
+if ! find_boost 1.63; then
+	install_boost
+fi
 
-echo "
-find_package(Boost 1.63.0 REQUIRED QUIET)
+if ! find_pkg librabbitmq; then
+	install_cmake_git https://github.com/alanxz/rabbitmq-c 
+fi
 
-if(NOT Boost_FOUND)
-  execute_process(COMMAND install_boost
-                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-endif() 
+if ! find_pkg libSimpleAmqpClient; then
+	install_cmake_git https://github.com/alanxz/SimpleAmqpClient 
+fi
 
-add_subdirectory("rabbitmq-c")
-add_subdirectory("SimpleAmqpClient")
-add_subdirectory("msgpack-c")
-add_subdirectory("spdlog")
-add_subdirectory("is-cpp")
+if ! find_pkg msgpack; then
+	install_cmake_git https://github.com/msgpack/msgpack-c 
+fi
 
-" > CMakeLists.txt
+if ! find_pkg opencv; then
+	install_cmake_git https://github.com/opencv/opencv 
+fi
 
-mkdir -p build && cd build && cmake .. && make install
+if ! find_folder /usr/local/include/spdlog; then
+	install_headers_git https://github.com/gabime/spdlog 
+fi
+
+mkdir build
+cmake $this_path/../ 
+make install
