@@ -40,10 +40,10 @@ void ServiceProvider::listen() {
         }
 
         if (request->Message()->ReplyToIsSet()) {
-          auto&& mandatory{true};
-          auto&& route = request->Message()->ReplyTo();
+          auto mandatory = true;
+          auto route = request->Message()->ReplyTo();
 
-          auto&& pos = route.find_first_of(';');
+          auto pos = route.find_first_of(';');
           if (pos == std::string::npos || pos + 1 > route.size()) {
             channel->BasicPublish(exchange, route, reply, mandatory);
           } else {

@@ -110,6 +110,6 @@ if ! find_folder /usr/local/include/spdlog; then
 	install_headers_git https://github.com/gabime/spdlog 
 fi
 
-mkdir build
+mkdir -p build
 cmake $this_path/../ 
 make install

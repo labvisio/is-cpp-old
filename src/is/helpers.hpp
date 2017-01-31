@@ -28,7 +28,7 @@ inline void set_timestamp(BasicMessage::ptr_t message) {
   message->Timestamp(system_clock::now().time_since_epoch().count());
 }
 
-inline auto latency(Envelope::ptr_t envelope) {
+inline double latency(Envelope::ptr_t envelope) {
   auto now = system_clock::now().time_since_epoch().count();
   auto diff = nanoseconds(now - envelope->Message()->Timestamp());
   return duration_cast<milliseconds>(diff).count();

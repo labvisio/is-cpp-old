@@ -30,19 +30,21 @@ class ServiceClient {
   std::string request(std::string const& route, BasicMessage::ptr_t message);
 
   template <class Time>
-  auto receive_for(Time const& timeout);
+  Envelope::ptr_t receive_for(Time const& timeout);
 
   template <class Time>
-  auto receive_for(Time const& timeout, std::string const& id, discard_others_tag);
+  Envelope::ptr_t receive_for(Time const& timeout, std::string const& id, discard_others_tag);
 
   template <class Time>
-  auto receive_until(Time const& deadline);
+  Envelope::ptr_t receive_until(Time const& deadline);
 
   template <class Time>
-  auto receive_until(Time const& deadline, std::string const& id, discard_others_tag);
+  Envelope::ptr_t receive_until(Time const& deadline, std::string const& id, discard_others_tag);
 
   template <class Time>
-  auto receive_until(Time const& deadline, std::vector<std::string> const& ids, discard_others_tag);
+  std::unordered_map<std::string, Envelope::ptr_t> receive_until(Time const& deadline,
+                                                                 std::vector<std::string> const& ids,
+                                                                 discard_others_tag);
 };  // ServiceClient
 
 }  // ::is

@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 2.8)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++14")
+set(CMAKE_CXX_FLAGS "-Wall -Werror -Wextra -std=c++11 ${CMAKE_CXX_FLAGS}")
 
 project(is_cpp)
 
-SET(IS_LIB_SRCS
+SET(IS_LIB_SRCS 
   src/connection.cpp
   src/service-client.cpp
   src/service-provider.cpp  
@@ -28,11 +28,17 @@ install(
     src/is/packer.hpp
     src/is/helpers.hpp
     src/is/msgs.hpp
+
+  DESTINATION 
+    include/is
+)
+
+install(
+  FILES
     src/is/msgs/common.hpp
     src/is/msgs/geometry.hpp
     src/is/msgs/camera.hpp
     src/is/msgs/robot.hpp
-
   DESTINATION 
-    include/is
+    include/is/msgs
 )

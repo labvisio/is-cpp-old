@@ -68,9 +68,10 @@ std::vector<Envelope::ptr_t> Connection::consume_sync(std::vector<std::string> c
   }
 
   while (1) {
-    auto minmax = std::minmax_element(std::begin(envelopes), std::end(envelopes), [](auto lhs, auto rhs) {
-      return lhs->Message()->Timestamp() < rhs->Message()->Timestamp();
-    });
+    auto minmax =
+        std::minmax_element(std::begin(envelopes), std::end(envelopes), [](Envelope::ptr_t lhs, Envelope::ptr_t rhs) {
+          return lhs->Message()->Timestamp() < rhs->Message()->Timestamp();
+        });
     auto min = (*minmax.first)->Message()->Timestamp();
     auto max = (*minmax.second)->Message()->Timestamp();
 
@@ -106,9 +107,10 @@ std::vector<Envelope::ptr_t> Connection::consume_sync(std::string const& tag, st
   }
 
   while (1) {
-    auto minmax = std::minmax_element(std::begin(envelopes), std::end(envelopes), [](auto lhs, auto rhs) {
-      return lhs->Message()->Timestamp() < rhs->Message()->Timestamp();
-    });
+    auto minmax =
+        std::minmax_element(std::begin(envelopes), std::end(envelopes), [](Envelope::ptr_t lhs, Envelope::ptr_t rhs) {
+          return lhs->Message()->Timestamp() < rhs->Message()->Timestamp();
+        });
     auto min = (*minmax.first)->Message()->Timestamp();
     auto max = (*minmax.second)->Message()->Timestamp();
 

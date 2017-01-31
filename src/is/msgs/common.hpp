@@ -18,7 +18,7 @@ struct Status {
 
 namespace status {
 const auto ok = Status{"ok", ""};
-const auto error = [](auto const& why) { return Status{"error", why}; };
+const auto error = [](std::string const& why) { return Status{"error", why}; };
 }
 
 struct Delay {

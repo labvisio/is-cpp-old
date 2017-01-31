@@ -41,7 +41,7 @@ std::string ServiceClient::request(std::string const& route, BasicMessage::ptr_t
 }
 
 template <class Time>
-auto ServiceClient::receive_for(Time const& timeout) {
+Envelope::ptr_t ServiceClient::receive_for(Time const& timeout) {
   int timeout_ms = duration_cast<milliseconds>(timeout).count();
   Envelope::ptr_t envelope;
   channel->BasicConsumeMessage(rpc_tag, envelope, timeout_ms);
@@ -49,7 +49,7 @@ auto ServiceClient::receive_for(Time const& timeout) {
 }
 
 template <class Time>
-auto ServiceClient::receive_for(Time const& timeout, std::string const& id, discard_others_tag) {
+Envelope::ptr_t ServiceClient::receive_for(Time const& timeout, std::string const& id, discard_others_tag) {
   Envelope::ptr_t envelope;
   do {
     envelope = receive_for(timeout);
@@ -58,7 +58,7 @@ auto ServiceClient::receive_for(Time const& timeout, std::string const& id, disc
 }
 
 template <class Time>
-auto ServiceClient::receive_until(Time const& deadline) {
+Envelope::ptr_t ServiceClient::receive_until(Time const& deadline) {
   auto timeout = deadline - system_clock::now();
   Envelope::ptr_t envelope;
   if (duration_cast<milliseconds>(timeout).count() >= 1.0) {
@@ -68,7 +68,7 @@ auto ServiceClient::receive_until(Time const& deadline) {
 }
 
 template <class Time>
-auto ServiceClient::receive_until(Time const& deadline, std::string const& id, discard_others_tag) {
+Envelope::ptr_t ServiceClient::receive_until(Time const& deadline, std::string const& id, discard_others_tag) {
   Envelope::ptr_t envelope;
   do {
     envelope = receive_until(deadline);
@@ -77,7 +77,9 @@ auto ServiceClient::receive_until(Time const& deadline, std::string const& id, d
 }
 
 template <class Time>
-auto ServiceClient::receive_until(Time const& deadline, std::vector<std::string> const& ids, discard_others_tag) {
+std::unordered_map<std::string, Envelope::ptr_t> ServiceClient::receive_until(Time const& deadline,
+                                                                              std::vector<std::string> const& ids,
+                                                                              discard_others_tag) {
   std::unordered_map<std::string, Envelope::ptr_t> map;
   auto n = ids.size();
   while (n) {
