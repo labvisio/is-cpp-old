@@ -7,6 +7,14 @@ namespace is {
 namespace msg {
 namespace camera {
 
+struct OggPacket {
+  bool new_context;
+  std::vector<unsigned char> data;
+  int64_t packet_n;
+  int64_t granule_pos;
+  IS_DEFINE_MSG(new_context, data, packet_n, granule_pos);
+};
+
 struct CompressedImage {
   std::string format;               // Image format: ".png", ".jpg"
   std::vector<unsigned char> data;  // Image binary data

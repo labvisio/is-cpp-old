@@ -13,14 +13,16 @@ Connection::Connection(Channel::ptr_t channel, std::string const& exchange) : ch
 }
 
 bool Connection::publish(std::string const& topic, BasicMessage::ptr_t message, bool mandatory) {
+  if (!message->TimestampIsSet()) {
+    set_timestamp(message);
+  }
+
   try {
-    if (!message->TimestampIsSet()) {
-      set_timestamp(message);
-    }
     channel->BasicPublish(exchange, topic, message, mandatory);
   } catch (MessageReturnedException) {
     return false;
   }
+
   return true;
 }
 
