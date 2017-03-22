@@ -157,6 +157,7 @@ struct Connection {
       auto event = this->consume(events_tag);
       if (event->Message()->HeaderTableIsSet()) {
         if (predicate(event->Message()->HeaderTable())) {
+          this->unsubscribe(events_tag);
           return;
         }
       }
