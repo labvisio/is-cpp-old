@@ -97,7 +97,8 @@ class ServiceClient {
   }
 
   template <typename Time>
-  auto receive_until(Time const& deadline, std::vector<std::string> const& ids, discard_others_tag) {
+  auto receive_until(Time const& deadline, std::vector<std::string> const& ids,
+                     discard_others_tag) {
     std::unordered_map<std::string, Envelope::ptr_t> map;
     auto n = ids.size();
     while (n) {

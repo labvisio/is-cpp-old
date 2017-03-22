@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
     A tag representing the subscription is returned. The tag can later
     be used to consume messages.   
   */
-  auto tag = is.subscribe({"device.temperature"});
+  auto tag = is.subscribe("device.temperature");
 
   /*
       Publishes a message to the "device.temperature" topic. The messages 

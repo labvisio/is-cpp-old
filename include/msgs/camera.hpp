@@ -7,6 +7,12 @@ namespace is {
 namespace msg {
 namespace camera {
 
+struct TheoraPacket {
+  bool new_header;
+  std::vector<unsigned char> data;  // Packet binary data
+  IS_DEFINE_MSG(new_header, data);
+};
+
 struct CompressedImage {
   std::string format;               // Image format: ".png", ".jpg"
   std::vector<unsigned char> data;  // Image binary data

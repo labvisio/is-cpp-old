@@ -14,7 +14,8 @@ Connection connect(std::string const& uri) {
   return {make_channel(uri)};
 }
 
-std::thread advertise(std::string const& uri, std::string const& name, std::vector<service_t> const& services) {
+std::thread advertise(std::string const& uri, std::string const& name,
+                      std::vector<service_t> const& services) {
   auto thread = std::thread([=]() {
     auto&& channel = make_channel(uri);
     ServiceProvider provider(name, channel);

@@ -3,8 +3,8 @@
 
 #include <SimpleAmqpClient/SimpleAmqpClient.h>
 #include <atomic>
-#include <string>
 #include <exception>
+#include <string>
 #include <unordered_map>
 #include "logger.hpp"
 
@@ -27,70 +27,65 @@ class ServiceProvider {
   std::unordered_map<std::string, service_handle_t> map;
 
  public:
-  ServiceProvider(std::string const& name, Channel::ptr_t const& channel, std::string const& exchange = "services")
+  ServiceProvider(std::string const& name, Channel::ptr_t const& channel,
+                  std::string const& exchange = "services")
       : name(name), channel(channel), exchange(exchange) {
     // passive durable auto_delete
     channel->DeclareExchange(exchange, Channel::EXCHANGE_TYPE_TOPIC, false, false, false);
     // passive, durable, exclusive, auto_delete
-    Table arguments{{TableKey("x-expires"), TableValue(30000)}};
+    Table arguments{{TableKey("x-expires"), TableValue(30000)},
+                    {TableKey("x-max-length"), TableValue(32)}};
     channel->DeclareQueue(name, false, false, false, false, arguments);
   }
 
   void expose(std::string const& binding, service_handle_t service) {
-    log::info("({}) Exposing new service on topic \"{}\"", name, binding);
     channel->BindQueue(name, exchange, binding);
     map.emplace(binding, service);
-  }
-
-  bool request_is_valid(Envelope::ptr_t request) {
-    auto&& valid = request->Message()->CorrelationIdIsSet() && request->Message()->ReplyToIsSet();
-    if (!valid) {
-      log::warn("({}) Malformed request @\"{}\"", name, request->RoutingKey());
-    }
-    return valid;
   }
 
   void listen() {
     // no_local, no_ack, exclusive
     auto tag = channel->BasicConsume(name, "", true, false, false);
 
-    log::info("({}) Listening incoming service requests", name);
+    log::info("Listening for service requests");
+
     while (1) {
-      Envelope::ptr_t request;
-      do {
-        request = channel->BasicConsumeMessage(tag);
-      } while (!request_is_valid(request));
-
+      auto request = channel->BasicConsumeMessage(tag);
       auto service = map.find(request->RoutingKey());
-
       if (service != map.end()) {
-        log::info("({}) New service request \"{}\"", name, request->RoutingKey());
+        log::info("New request \"{}\"", request->RoutingKey());
+
         try {
           auto reply = service->second(request);
-          reply->CorrelationId(request->Message()->CorrelationId());
-          log::info("({}) Done processing \"{}\" id:\"{}\"", name, request->RoutingKey(), reply->CorrelationId());
 
-          auto&& mandatory{true};
-          auto&& route = request->Message()->ReplyTo();
-          auto&& pos = route.find_first_of(';');
-          if (pos == std::string::npos || pos + 1 > route.size()) {
-            channel->BasicPublish(exchange, route, reply, mandatory);
-          } else {
-            reply->ReplyTo(route.substr(pos + 1));
-            channel->BasicPublish(exchange, route.substr(0, pos), reply, mandatory);
+          if (request->Message()->CorrelationIdIsSet()) {
+            reply->CorrelationId(request->Message()->CorrelationId());
+          }
+
+          if (request->Message()->ReplyToIsSet()) {
+            auto mandatory = true;
+            auto route = request->Message()->ReplyTo();
+
+            auto pos = route.find_first_of(';');
+            if (pos == std::string::npos || pos + 1 > route.size()) {
+              channel->BasicPublish(exchange, route, reply, mandatory);
+            } else {
+              reply->ReplyTo(route.substr(pos + 1));
+              channel->BasicPublish(exchange, route.substr(0, pos), reply, mandatory);
+            }
           }
         } catch (std::exception const& e) {
-          log::error("({}) Service \"{}\" throwed an exception. \n\t@reason: \"{}\"", name, request->RoutingKey(),
-                    e.what());
+          log::error("Service \"{}\" throwed an exception! \n\t@reason: \"{}\"",
+                     request->RoutingKey(), e.what());
         }
       } else {
-        log::warn("({}) Invalid service requested \"{}\"", name, request->RoutingKey());
+        log::warn("Invalid service requested \"{}\"", request->RoutingKey());
       }
 
       channel->BasicAck(request);
     }
   }
-};
+}; // ::ServiceProvider
 
 }  // ::is
 

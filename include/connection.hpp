@@ -24,15 +24,16 @@ struct QueueInfo {
 struct Connection {
   Channel::ptr_t channel;
 
-  Connection(std::string const& uri, std::string const& exchange = "data") : Connection(make_channel(uri), exchange) {}
+  Connection(std::string const& uri, std::string const& exchange = "data")
+      : Connection(make_channel(uri), exchange) {}
 
   Connection(Channel::ptr_t channel, std::string const& exchange = "data") : channel(channel) {
     // passive durable auto_delete
     channel->DeclareExchange(exchange, Channel::EXCHANGE_TYPE_TOPIC, false, false, false);
   }
 
-  bool publish(std::string const& topic, BasicMessage::ptr_t message, std::string const& exchange = "data",
-               bool mandatory = false) {
+  bool publish(std::string const& topic, BasicMessage::ptr_t message,
+               std::string const& exchange = "data", bool mandatory = false) {
     try {
       if (!message->TimestampIsSet()) {
         set_timestamp(message);
@@ -46,13 +47,14 @@ struct Connection {
 
   void unsubscribe(QueueInfo const& info) { channel->DeleteQueue(info.name); }
 
-  QueueInfo subscribe(std::string const& topic, std::string const& exchange = "data", int queue_size = 1) {
+  QueueInfo subscribe(std::string const& topic, std::string const& exchange = "data",
+                      int queue_size = 1) {
     std::vector<std::string> topics{topic};
     return subscribe(topics, exchange, queue_size);
   }
 
   QueueInfo subscribe(std::vector<std::string> const& topics, std::string const& exchange = "data",
-                      int queue_size = 0) {
+                      int queue_size = 32) {
     // queue_name, passive, durable, exclusive, auto_delete
     std::string queue;
     if (queue_size) {
@@ -83,7 +85,8 @@ struct Connection {
     return envelope;
   }
 
-  std::vector<Envelope::ptr_t> consume_sync(std::vector<QueueInfo> const& infos, int64_t period_ms) {
+  std::vector<Envelope::ptr_t> consume_sync(std::vector<QueueInfo> const& infos,
+                                            int64_t period_ms) {
     std::vector<Envelope::ptr_t> envelopes;
     envelopes.reserve(infos.size());
     for (auto& info : infos) {
@@ -92,9 +95,10 @@ struct Connection {
     }
 
     while (1) {
-      auto minmax = std::minmax_element(std::begin(envelopes), std::end(envelopes), [](auto lhs, auto rhs) {
-        return lhs->Message()->Timestamp() < rhs->Message()->Timestamp();
-      });
+      auto minmax =
+          std::minmax_element(std::begin(envelopes), std::end(envelopes), [](auto lhs, auto rhs) {
+            return lhs->Message()->Timestamp() < rhs->Message()->Timestamp();
+          });
       auto min = (*minmax.first)->Message()->Timestamp();
       auto max = (*minmax.second)->Message()->Timestamp();
 
@@ -110,7 +114,8 @@ struct Connection {
     return envelopes;
   }
 
-  std::vector<Envelope::ptr_t> consume_sync(QueueInfo const& info, std::vector<std::string> topics, int64_t period_ms) {
+  std::vector<Envelope::ptr_t> consume_sync(QueueInfo const& info, std::vector<std::string> topics,
+                                            int64_t period_ms) {
     std::vector<Envelope::ptr_t> envelopes(topics.size());
     std::sort(std::begin(topics), std::end(topics));
 
@@ -129,9 +134,10 @@ struct Connection {
     }
 
     while (1) {
-      auto minmax = std::minmax_element(std::begin(envelopes), std::end(envelopes), [](auto lhs, auto rhs) {
-        return lhs->Message()->Timestamp() < rhs->Message()->Timestamp();
-      });
+      auto minmax =
+          std::minmax_element(std::begin(envelopes), std::end(envelopes), [](auto lhs, auto rhs) {
+            return lhs->Message()->Timestamp() < rhs->Message()->Timestamp();
+          });
       auto min = (*minmax.first)->Message()->Timestamp();
       auto max = (*minmax.second)->Message()->Timestamp();
 
