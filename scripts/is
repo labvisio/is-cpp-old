@@ -1,0 +1,26 @@
+#!/bin/bash
+
+function print_usage {
+  echo $"Usage: is {create|help}"
+}
+
+set -e
+
+case "$1" in
+  create)
+    if [ $# -eq 2 ]; then
+      mkdir -p $2
+      APP_NAME=$2 templater /usr/local/share/is/templates/Makefile > $2/Makefile
+      cp /usr/local/share/is/templates/app.cpp $2/$2.cpp
+    else
+      print_usage
+    fi
+  ;;
+
+  help)
+    print_usage
+  ;;
+
+  *)
+    print_usage
+esac

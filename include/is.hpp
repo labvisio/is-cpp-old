@@ -7,6 +7,8 @@
 #include "packer.hpp"
 #include "service-client.hpp"
 #include "service-provider.hpp"
+#include "data-publisher.hpp"
+#include "event-watcher.hpp"
 
 namespace is {
 
@@ -17,14 +19,10 @@ Connection connect(std::string const& uri) {
 std::thread advertise(std::string const& uri, std::string const& name,
                       std::vector<service_t> const& services) {
   auto thread = std::thread([=]() {
-    auto&& channel = make_channel(uri);
-    ServiceProvider provider(name, channel);
+    ServiceProvider provider(name, make_channel(uri));
     for (auto& service : services) {
-      auto binding = name + "." + service.name;
-      auto handle = service.handle;
-      provider.expose(binding, handle);
+      provider.expose(service.name, service.handle);
     }
-
     provider.listen();
   });
 

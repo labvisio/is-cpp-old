@@ -39,8 +39,9 @@ class ServiceProvider {
   }
 
   void expose(std::string const& binding, service_handle_t service) {
-    channel->BindQueue(name, exchange, binding);
-    map.emplace(binding, service);
+    auto topic = name + '.' + binding;
+    channel->BindQueue(name, exchange, topic);
+    map.emplace(topic, service);
   }
 
   void listen() {

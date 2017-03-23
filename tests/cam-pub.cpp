@@ -10,13 +10,13 @@ int main(int, char* []) {
 
   cv::VideoCapture webcam(0);
   assert(webcam.isOpened());
-  webcam.set(CV_CAP_PROP_FPS, 15);
+  webcam.set(CV_CAP_PROP_FPS, 30);
 
   is::TheoraEncoder encoder;
 
   std::thread thread([uri, &encoder]() {
     is::ServiceProvider service("webcam", is::make_channel(uri));
-    service.expose("webcam.get_headers", [&encoder](auto) {
+    service.expose("get_headers", [&encoder](auto) {
       auto headers = encoder.get_headers();
       return is::msgpack(headers);  // get_headers is thread safe
     });

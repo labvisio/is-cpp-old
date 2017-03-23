@@ -59,7 +59,7 @@ function install::cmake {
 function install::autogen {
 	read path
 	cd $path
-	./autogen
+	./autogen.sh
 	make install -j `nproc`
 	cd $install_path
 }
@@ -82,51 +82,49 @@ function install::boost {
 	cd $install_path
 }
 
-if ! find::folder /usr/local/include/is; then 
 
-	apt-get update && apt-get install -y --ignore-missing \
-		build-essential cmake git pkg-config autoconf libtool \
-		libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev \
-		libssl-dev libpgm-dev libarmadillo-dev libopenblas-dev liblapack-dev liblapacke-dev \
-		libvorbis-dev libudev-dev libjpeg-dev libopenal-dev
+apt-get update && apt-get install -y --ignore-missing \
+	build-essential cmake git pkg-config autoconf libtool \
+	libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev \
+	libssl-dev libpgm-dev libarmadillo-dev libopenblas-dev liblapack-dev liblapacke-dev \
+	libvorbis-dev libudev-dev libjpeg-dev libopenal-dev
 
-	set -e
+if ! find::boost 1.63; then
+	install::boost
+fi
 
-	if ! find::boost 1.63; then
-		install::boost
-	fi
+if ! find::pkg librabbitmq; then
+	import::git https://github.com/alanxz/rabbitmq-c | install::cmake 
+fi
 
-	if ! find::pkg librabbitmq; then
-		import::git https://github.com/alanxz/rabbitmq-c | install::cmake 
-	fi
+if ! find::pkg libSimpleAmqpClient; then
+	import::git https://github.com/alanxz/SimpleAmqpClient | install::cmake
+fi
 
-	if ! find::pkg libSimpleAmqpClient; then
-		import::git https://github.com/alanxz/SimpleAmqpClient | install::cmake
-	fi
+if ! find::pkg msgpack; then
+	import::git https://github.com/msgpack/msgpack-c | install::cmake 
+fi
 
-	if ! find::pkg msgpack; then
-		import::git https://github.com/msgpack/msgpack-c | install::cmake 
-	fi
+if ! find::pkg opencv; then
+	import::git https://github.com/opencv/opencv | install::cmake 
+fi
 
-	if ! find::pkg opencv; then
-		import::git https://github.com/opencv/opencv | install::cmake 
-	fi
+if ! find::folder /usr/local/include/spdlog; then
+	import::git https://github.com/gabime/spdlog | install::header_only
+fi
 
-	if ! find::folder /usr/local/include/spdlog; then
-		import::git https://github.com/gabime/spdlog | install::header_only
-	fi
-
-	if ! find::pkg "theoradec theoraenc theora"; then
-		import::git https://github.com/xiph/theora | install::autogen
-	fi
-
-	if ! find::folder /usr/local/include/spdlog; then
-		import::git https://github.com/gabime/spdlog | install::header_only
-	fi
-
+if ! find::pkg "theoradec theoraenc theora"; then
+	import::git https://github.com/xiph/theora | install::autogen
 fi
 
 cd $this_path
 echo ' [x] installing is...'
 mkdir -p /usr/local/include/is
 cp -r ../include/* /usr/local/include/is/
+
+echo ' [x] installing scritps...'
+cp is lddcp templater /usr/local/bin
+
+echo ' [x] installing templates...'
+mkdir -p /usr/local/share/is /usr/local/share/is/templates
+cp templates/* /usr/local/share/is/templates

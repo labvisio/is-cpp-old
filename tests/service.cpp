@@ -11,7 +11,7 @@ int main(int , char* []) {
   std::string uri = "amqp://guest:guest@localhost:5672";
   std::thread thread([=] () {
     is::ServiceProvider service("math", is::make_channel(uri));
-    service.expose("math.increment", increment);
+    service.expose("increment", increment);
     service.listen();
   });
 
