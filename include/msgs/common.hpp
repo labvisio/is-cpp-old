@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include "../packer.hpp"
+#include "../helpers.hpp"
 
 namespace is {
 namespace msg {
@@ -27,7 +28,7 @@ struct Delay {
 };
 
 struct Timestamp {
-  uint64_t nanoseconds = system_clock::now().time_since_epoch().count();  // time since machine epoch in nanoseconds
+  uint64_t nanoseconds = time_since_epoch_ns();  // time since machine epoch in nanoseconds
   IS_DEFINE_MSG(nanoseconds);
 };
 

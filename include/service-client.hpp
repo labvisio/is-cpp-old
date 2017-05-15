@@ -43,7 +43,8 @@ class ServiceClient {
 
     message->MessageId(make_uid());
     message->HeaderTable(Table{{TableKey("type"), TableValue("request")},
-                               {TableKey("context"), TableValue(make_uid())}});
+                               {TableKey("context"), TableValue(make_uid())},
+                               {TableKey("published-at-ns"), TableValue(time_since_epoch_ns())}});
 
     bool mandatory{true};  // fail fast if no service provider exists on the
                            // specified route
