@@ -7,6 +7,13 @@
 #include <sstream>
 #include "logger.hpp"
 
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/date_time/gregorian/gregorian.hpp>
+
 namespace is {
 
 using namespace std::chrono;
@@ -24,8 +31,13 @@ Channel::ptr_t make_channel(std::string const& uri) {
   }
 }
 
-void set_timestamp(BasicMessage::ptr_t message) {
-  message->Timestamp(system_clock::now().time_since_epoch().count());
+auto time_since_epoch_ns() {
+  const boost::posix_time::ptime epoch(boost::gregorian::date(1970, 1, 1));
+  return (boost::posix_time::microsec_clock::universal_time() - epoch).total_nanoseconds();
+}
+
+std::string make_uid() {
+  return boost::uuids::to_string(boost::uuids::random_generator()());
 }
 
 auto latency(Envelope::ptr_t envelope) {

@@ -9,6 +9,10 @@
 #include <vector>
 #include "helpers.hpp"
 
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
 namespace is {
 
 using namespace AmqpClient;
@@ -35,9 +39,16 @@ struct Connection {
   bool publish(std::string const& topic, BasicMessage::ptr_t message,
                std::string const& exchange = "data", bool mandatory = false) {
     try {
+      message->MessageId(make_uid());
+
       if (!message->TimestampIsSet()) {
-        set_timestamp(message);
+        message->Timestamp(time_since_epoch_ns());
       }
+
+      auto headers = message->HeaderTable();
+      headers.emplace(TableKey("published-at-ns"), TableValue(time_since_epoch_ns()));
+      message->HeaderTable(headers);
+
       channel->BasicPublish(exchange, topic, message, mandatory);
     } catch (MessageReturnedException) {
       return false;

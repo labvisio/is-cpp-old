@@ -51,30 +51,44 @@ class ServiceProvider {
     log::info("Listening for service requests");
 
     while (1) {
-      auto request = channel->BasicConsumeMessage(tag);
+      Request request = channel->BasicConsumeMessage(tag);
+
       auto service = map.find(request->RoutingKey());
-      if (service != map.end()) {
+      if (request->Message()->ReplyToIsSet() && request->Message()->CorrelationIdIsSet() &&
+          service != map.end()) {
         log::info("New request \"{}\"", request->RoutingKey());
 
         try {
+          auto start_time = time_since_epoch_ns();
           auto reply = service->second(request);
+          auto completion_time = time_since_epoch_ns();
 
-          if (request->Message()->CorrelationIdIsSet()) {
-            reply->CorrelationId(request->Message()->CorrelationId());
+          // -- inject tracing
+          auto context = request->Message()->HeaderTableIsSet()
+                             ? request->Message()->HeaderTable()["context"]
+                             : "none";
+
+          Table headers{{TableKey("start-time-ns"), TableValue(start_time)},
+                        {TableKey("completion-time-ns"), TableValue(completion_time)},
+                        {TableKey("type"), TableValue("reply")},
+                        {TableKey("served-by"), TableValue(tag)},
+                        {TableKey("context"), context}};
+
+          reply->MessageId(make_uid());
+          reply->HeaderTable(headers);
+          // --
+
+          reply->CorrelationId(request->Message()->CorrelationId());
+
+          auto route = request->Message()->ReplyTo();
+          auto pos = route.find_first_of(';');
+          if (pos == std::string::npos || pos + 1 > route.size()) {
+            channel->BasicPublish(exchange, route, reply, true /*mandatory*/);
+          } else {
+            reply->ReplyTo(route.substr(pos + 1));
+            channel->BasicPublish(exchange, route.substr(0, pos), reply, true /*mandatory*/);
           }
 
-          if (request->Message()->ReplyToIsSet()) {
-            auto mandatory = true;
-            auto route = request->Message()->ReplyTo();
-
-            auto pos = route.find_first_of(';');
-            if (pos == std::string::npos || pos + 1 > route.size()) {
-              channel->BasicPublish(exchange, route, reply, mandatory);
-            } else {
-              reply->ReplyTo(route.substr(pos + 1));
-              channel->BasicPublish(exchange, route.substr(0, pos), reply, mandatory);
-            }
-          }
         } catch (std::exception const& e) {
           log::error("Service \"{}\" throwed an exception! \n\t@reason: \"{}\"",
                      request->RoutingKey(), e.what());
@@ -86,7 +100,7 @@ class ServiceProvider {
       channel->BasicAck(request);
     }
   }
-}; // ::ServiceProvider
+};  // ::ServiceProvider
 
 }  // ::is
 

@@ -41,6 +41,10 @@ class ServiceClient {
     message->CorrelationId(id);
     ++correlation_id;
 
+    message->MessageId(make_uid());
+    message->HeaderTable(Table{{TableKey("type"), TableValue("request")},
+                               {TableKey("context"), TableValue(make_uid())}});
+
     bool mandatory{true};  // fail fast if no service provider exists on the
                            // specified route
 
