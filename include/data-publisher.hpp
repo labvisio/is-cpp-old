@@ -41,7 +41,7 @@ struct DataPublisher {
       n = has_consumers ? n + 1 : n;
     };
 
-    watcher.watch_for(std::chrono::milliseconds(1), [&](auto table) {
+    watcher.watch_for(std::chrono::milliseconds(n == 0 ? 1000 : 1), [&](auto table) {
       auto&& topic = table["routing_key"].GetString();
       auto&& key_value = generators.find(topic);
       if (key_value != generators.end()) {
