@@ -38,9 +38,11 @@ struct SamplingRate {
   IS_DEFINE_MSG(rate, period);
 };
 
-struct EntityList {
-  std::vector<std::string> list;
-  IS_DEFINE_MSG(list);
+struct SyncRequest {
+  std::vector<std::string> entities;
+  SamplingRate sampling_rate;
+
+  IS_DEFINE_MSG(entities, sampling_rate);
 };
 
 }  // ::common
